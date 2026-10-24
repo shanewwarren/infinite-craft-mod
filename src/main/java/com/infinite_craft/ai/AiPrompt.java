@@ -225,7 +225,8 @@ public class AiPrompt {
 			\t\tAnything that shoots (guns, blasters, ray guns, lasers, wands, launchers, magic bows): "infinite_craft:shoot", this mod's component. It fires with NO ammo while right click is held.
 			\t\t\tFields: kind ("beam": instant colored ray, for lasers, ray guns, wands; "bullet": fast projectile, for nail guns, machine guns, shotguns, bows),
 			\t\t\tdamage (per hit; a zombie has 20 health, a diamond sword does 7), interval (ticks between shots: 4 is the fastest, 20 is once a second),
-			\t\t\tcount (shots per pull, e.g. 5 for a shotgun), spread (aim error in degrees), color (a color name or "#RRGGBB"), fire (true sets targets on fire), optional sound (a sound event id).
+			\t\t\tcount (shots per pull, e.g. 5 for a shotgun), spread (aim error in degrees), color (a color name or "#RRGGBB"), fire (true sets targets on fire), optional sound.
+			\t\t\tsound plays on EVERY shot, so leave it out (beams zap, bullets click) or pick a short one like "minecraft:entity.blaze.shoot"; never explosions or long sounds like beacon or music.
 			\t\t\tMake different guns feel different: a chain gun fires every 4 ticks with some spread, a ray gun is a colored beam, a shotgun fires several bullets with wide spread, a sniper is slow and hits hard.
 			\t\t\tGive it a fitting "minecraft:item_model" on infinite_craft:custom_crafted_item. A vanilla bow or crossbow alone needs arrows the player may not have, so add "infinite_craft:shoot" to those too.
 			\t\tPunchers, hammers: minecraft:mace (wind_burst, density, breach) or a big attack_knockback modifier

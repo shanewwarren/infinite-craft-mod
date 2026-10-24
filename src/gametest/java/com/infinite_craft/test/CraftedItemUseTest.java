@@ -165,7 +165,14 @@ public class CraftedItemUseTest {
 			if (effect instanceof ApplyEffectsConsumeEffect apply) {
 				for (StatusEffectInstance instance : apply.effects()) {
 					String id = instance.getEffectType().getIdAsString();
-					(player.hasStatusEffect(instance.getEffectType()) ? seen : missing).add(id);
+					if (player.hasStatusEffect(instance.getEffectType())) {
+						seen.add(id);
+					} else if (apply.probability() >= 1) {
+						missing.add(id);
+					} else {
+						// a chance effect (like a sugar crash) is allowed not to happen
+						seen.add("%s didn't roll (%.0f%% chance)".formatted(id, apply.probability() * 100));
+					}
 				}
 			} else if (effect instanceof TeleportRandomlyConsumeEffect) {
 				double moved = player.getEntityPos().distanceTo(start);
