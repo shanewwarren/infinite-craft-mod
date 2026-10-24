@@ -21,7 +21,14 @@ public class Abilities {
 		ComponentType.<ShootComponent>builder().codec(ShootComponent.CODEC).build()
 	);
 
+	public static final ComponentType<ThrustComponent> THRUST = Registry.register(
+		Registries.DATA_COMPONENT_TYPE,
+		Identifier.of(InfiniteCraft.MOD_ID, "thrust"),
+		ComponentType.<ThrustComponent>builder().codec(ThrustComponent.CODEC).build()
+	);
+
 	public static void initialize() {
 		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, SHOOT);
+		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, THRUST);
 	}
 }

@@ -295,6 +295,47 @@ MODELS = {
 }
 
 
+# Worn looks, drawn onto the chest part of the 64x32 humanoid armor layout (body box at u=16, v=16, 8x12x4).
+# name: {face: sprite}; faces are front 8x12, back 8x12, right/left 4x12, top 8x4
+EQUIPMENT = {
+    "jetpack": {
+        "back": [
+            "KKK..KKK",
+            "LWLKKLWL",
+            "RWRDDRWR",
+            "RWRDDRWR",
+            "RWRDDRWR",
+            "RRRDDRRR",
+            "MMMDDMMM",
+            "RRRDDRRR",
+            "RRRKKRRR",
+            "MMM..MMM",
+            "DDD..DDD",
+            ".K....K.",
+        ],
+        "front": [
+            ".K....K.",
+            ".K....K.",
+            ".K....K.",
+            ".KKKKKK.",
+            ".K....K.",
+            ".K....K.",
+            ".K....K.",
+            "........",
+            "........",
+            "........",
+            "........",
+            "........",
+        ],
+        "right": ["....", "....", "...R", "...R", "...R", "...R", "...M", "...R", "...R", "...M", "...D", "...."],
+        "left": ["....", "....", "R...", "R...", "R...", "R...", "M...", "R...", "R...", "M...", "D...", "...."],
+        "top": ["........", "........", "........", "RRR..RRR"],
+    },
+}
+# where each chest face sits in the 64x32 armor texture
+FACES = {"front": (20, 20), "back": (32, 20), "right": (16, 20), "left": (28, 20), "top": (20, 16)}
+
+
 def png(path, pixels):
     """pixels: 16 rows of 16 (r, g, b, a)"""
     raw = b"".join(b"\0" + bytes(c for px in row for c in px) for row in pixels)
@@ -365,6 +406,19 @@ def main():
                 for x in range(16 * scale):
                     img[oy + y][ox + x] = (*sprite[y // scale][x // scale], 255)
         png(sys.argv[1], img)
+    os.makedirs(f"{ASSETS}/textures/entity/equipment/humanoid", exist_ok=True)
+    os.makedirs(f"{ASSETS}/equipment", exist_ok=True)
+    for name, faces in EQUIPMENT.items():
+        texture = [[(0, 0, 0, 0)] * 64 for _ in range(32)]
+        for face, sprite in faces.items():
+            ox, oy = FACES[face]
+            for y, row in enumerate(sprite):
+                for x, ch in enumerate(row):
+                    if ch in PALETTE:
+                        texture[oy + y][ox + x] = (*PALETTE[ch], 255)
+        png(f"{ASSETS}/textures/entity/equipment/humanoid/{name}.png", texture)
+        write_json(f"{ASSETS}/equipment/{name}.json", {"layers": {"humanoid": [{"texture": f"infinite_craft:{name}"}]}})
+
     # the list the prompt offers Claude (AiPrompt reads it)
     write_json(f"{ASSETS}/crafted_models.json",
                [{"model": f"infinite_craft:{name}", "description": description} for name, (_, _, description, _) in MODELS.items()])
