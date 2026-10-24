@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "infinite_craft:item/energy_drink",
+    "layer1": "infinite_craft:item/energy_drink_glow",
+    "layer2": "infinite_craft:item/energy_drink_core",
+    "particle": "#layer0"
+  }
+}

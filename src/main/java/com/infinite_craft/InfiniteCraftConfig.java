@@ -17,6 +17,8 @@ public class InfiniteCraftConfig {
 
     public String GeminiApiKey = null;
     public String GeminiModelName = null;
+    public String ClaudeApiKey = null;
+    public String ClaudeModelName = null;
     public String ModelProxy = "none";
     public String ModelType = "none";
     public String Language = "en-US";
@@ -35,13 +37,26 @@ public class InfiniteCraftConfig {
                     "For API key, generate here: https://aistudio.google.com/api-keys"
                 ]
             },
+            "claude": {
+                "api_key": null,
+                "model": "claude-opus-5-5",
+                "note": [
+                    "the `model` can be: ",
+                    "    claude-opus-5-5 (best results)",
+                    "    claude-sonnet-5-5",
+                    "    claude-haiku-5-5 (cheapest)",
+                    "    or any other ones in https://platform.claude.com/docs/en/about-claude/models/overview",
+                    "For API key, generate here: https://platform.claude.com/settings/keys"
+                ]
+            },
             "proxy": "none",
             "model": "gemini",
             "lang": "en-US",
             "description": {
                 "proxy": "Proxy type, could be (none, system)",
-                "model": "The model to use, could be (none, gemini, ollama), use none if you only use the mod as a player of a server",
+                "model": "The model to use, could be (none, gemini, claude, ollama), use none if you only use the mod as a player of a server",
                 "gemini": "The gemini config",
+                "claude": "The claude config",
                 "lang": "The language of the result, should be a language code: https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes, but you actually can use the language name",
                 "!!!": "This file will be overridden, so please save your important information somewhere else!"
             }
@@ -53,9 +68,12 @@ public class InfiniteCraftConfig {
         public static final String GeminiJson="gemini";
         public static final String GeminiApiKey="api_key";
         public static final String GeminiModelName="model";
+        public static final String ClaudeJson="claude";
+        public static final String ClaudeApiKey="api_key";
+        public static final String ClaudeModelName="model";
         public static final String Language="lang";
         public static final StringOptions Proxy = new StringOptions("proxy", Set.of("none", "system"), "none");
-        public static final StringOptions ModelType = new StringOptions("model", Set.of("none", "gemini", "ollama"), "none");
+        public static final StringOptions ModelType = new StringOptions("model", Set.of("none", "gemini", "claude", "ollama"), "none");
         public static class StringOptions {
             public String name;
             public String defaultValue;
@@ -87,8 +105,14 @@ public class InfiniteCraftConfig {
                 JsonObject gemeniConfig = json.get(KeyNames.GeminiJson).getAsJsonObject();
                 GeminiApiKey=readStringFromObject(gemeniConfig, KeyNames.GeminiApiKey);
                 GeminiModelName=readStringFromObject(gemeniConfig, KeyNames.GeminiModelName);
-                if(GeminiModelName==null) GeminiModelName="gemini-2.5-flash";
+                if(GeminiModelName==null || GeminiModelName.isEmpty()) GeminiModelName="gemini-2.5-flash";
             }
+            if(json.has(KeyNames.ClaudeJson) && json.get(KeyNames.ClaudeJson).isJsonObject()){
+                JsonObject claudeConfig = json.get(KeyNames.ClaudeJson).getAsJsonObject();
+                ClaudeApiKey=readStringFromObject(claudeConfig, KeyNames.ClaudeApiKey);
+                ClaudeModelName=readStringFromObject(claudeConfig, KeyNames.ClaudeModelName);
+            }
+            if(ClaudeModelName==null || ClaudeModelName.isEmpty()) ClaudeModelName="claude-opus-5-5";
             ModelProxy=KeyNames.Proxy.get(readStringFromObject(json, KeyNames.Proxy.name));
             ModelType=KeyNames.ModelType.get(readStringFromObject(json, KeyNames.ModelType.name));
             Language=Optional.ofNullable(readStringFromObject(json, KeyNames.Language)).orElse("en-US");
@@ -120,6 +144,10 @@ public class InfiniteCraftConfig {
                 JsonObject geminiConfig = newConfig.get(KeyNames.GeminiJson).getAsJsonObject();
                 geminiConfig.addProperty(KeyNames.GeminiApiKey, GeminiApiKey);
                 geminiConfig.addProperty(KeyNames.GeminiModelName, GeminiModelName);
+
+                JsonObject claudeConfig = newConfig.get(KeyNames.ClaudeJson).getAsJsonObject();
+                claudeConfig.addProperty(KeyNames.ClaudeApiKey, ClaudeApiKey);
+                claudeConfig.addProperty(KeyNames.ClaudeModelName, ClaudeModelName);
             } catch (Exception e) {
                 System.err.print(e.getMessage());
             }

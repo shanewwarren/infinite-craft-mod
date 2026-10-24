@@ -1,0 +1,8 @@
+{
+  "parent": "infinite_craft:item/gun",
+  "textures": {
+    "layer0": "infinite_craft:item/flamethrower",
+    "layer1": "infinite_craft:item/flamethrower_glow",
+    "particle": "#layer0"
+  }
+}

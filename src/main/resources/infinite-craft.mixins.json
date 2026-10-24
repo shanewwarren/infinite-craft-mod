@@ -5,7 +5,9 @@
 	"mixins": [
 		"ScreenHandlerMixin",
 		"CraftingTableBlockMixin",
-		"PlayerEntityMixin"
+		"PlayerEntityMixin",
+		"ItemStackMixin",
+		"PersistentProjectileEntityMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

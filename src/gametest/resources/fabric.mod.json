@@ -1,0 +1,20 @@
+{
+	"schemaVersion": 1,
+	"id": "infinite-craft-test",
+	"version": "1.0.0",
+	"name": "Infinite Craft game tests",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-gametest": [
+			"com.infinite_craft.test.CraftedItemUseTest",
+			"com.infinite_craft.test.ShootTest"
+		],
+		"fabric-client-gametest": [
+			"com.infinite_craft.test.ShootClientGameTest",
+			"com.infinite_craft.test.ItemLooksClientGameTest"
+		]
+	},
+	"depends": {
+		"infinite-craft": "*"
+	}
+}

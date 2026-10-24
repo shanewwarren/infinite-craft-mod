@@ -50,6 +50,15 @@ dependencies {
 	//Gemini
 	implementation 'com.google.genai:google-genai:1.0.0'
 	shadow 'com.google.genai:google-genai:1.0.0'
+
+	//Claude
+	implementation 'com.anthropic:anthropic-java:3.3.0'
+	shadow 'com.anthropic:anthropic-java:3.3.0'
+
+	//Tests (boots Minecraft registries for the Claude eval)
+	testImplementation "net.fabricmc:fabric-loader-junit:${project.loader_version}"
+	testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.4'
 }
 
 // import org.gradle.api.file.DuplicatesStrategy
@@ -128,6 +137,8 @@ shadowJar {
                             def parts = name.split('/')
                             if (parts.length >= 2) {
                                 def rootPkg = parts[0..1].join('.')
+                                // Kotlin reflection (used by the Anthropic SDK) resolves its builtins by name and breaks when relocated
+                                if (parts[0] == 'kotlin') return
                                 if (!seen.contains(rootPkg)) {
                                     relocate rootPkg, "com.infinite_craft.libs.${rootPkg}"
                                     seen << rootPkg
@@ -221,5 +232,29 @@ publishing {
 fabricApi {
 	configureDataGeneration() {
 		client = true
+	}
+	// Server game tests in src/gametest: they use crafted items in a real world. Run with `./gradlew runGameTest`; `test` runs them too
+	configureTests {
+		createSourceSet = true
+		modId = "infinite-craft-test"
+		enableGameTests = true
+		enableClientGameTests = true
+		eula = true // By setting this to true, you agree to the Minecraft EULA.
+	}
+}
+
+tasks.named('runGameTest') {
+	systemProperty 'infiniteCraft.reportDir', layout.buildDirectory.dir('gametest').get().asFile.path
+	// items from the last Claude eval run, if any; otherwise the test uses its checked-in snapshot
+	systemProperty 'infiniteCraft.evalItems', layout.buildDirectory.file('claude-eval/crafted_items.txt').get().asFile.path
+}
+
+test {
+	useJUnitPlatform()
+	// Forward the eval settings to the test JVM; without ANTHROPIC_API_KEY the eval is skipped
+	environment 'ANTHROPIC_API_KEY', System.getenv('ANTHROPIC_API_KEY') ?: ''
+	systemProperty 'claudeEval.models', System.getProperty('claudeEval.models', 'claude-opus-5-5,claude-haiku-5-5')
+	testLogging {
+		showStandardStreams = true
 	}
 }
