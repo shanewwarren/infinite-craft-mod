@@ -176,9 +176,14 @@ public class CraftedItemUseTest {
 						seen.add("%s didn't roll (%.0f%% chance)".formatted(id, apply.probability() * 100));
 					}
 				}
-			} else if (effect instanceof TeleportRandomlyConsumeEffect) {
+			} else if (effect instanceof TeleportRandomlyConsumeEffect teleport) {
+				// a random teleport sometimes finds no safe spot in the small test arena, so retry before calling it broken
+				int tries = 1;
+				for (; tries < 6 && player.getEntityPos().distanceTo(start) <= 1; tries++) {
+					teleport.onConsume(context.getWorld(), stack, player);
+				}
 				double moved = player.getEntityPos().distanceTo(start);
-				(moved > 1 ? seen : missing).add("teleport (moved %.1f)".formatted(moved));
+				(moved > 1 ? seen : missing).add("teleport (moved %.1f%s)".formatted(moved, tries > 1 ? " after " + tries + " tries" : ""));
 			}
 		}
 		if (stack.contains(DataComponentTypes.FOOD)) {
