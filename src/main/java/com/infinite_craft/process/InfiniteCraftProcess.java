@@ -24,6 +24,7 @@ import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.StringNbtReader;
 import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.screen.CraftingScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.server.MinecraftServer;
@@ -180,7 +181,7 @@ public class InfiniteCraftProcess {
                         String nbtString = response.get("itemNbt").getAsString();
                         InfiniteCraft.LOGGER.info("Item NBT:\n"+nbtString);
                         if(!response.has("element")){
-                            return parseItemStackFromNbt(nbtString);
+                            return parseItemStackFromNbt(nbtString, player.getRegistryManager());
                         } else {
                             JsonObject elementData = response.get("element").getAsJsonObject();
                             return ElementItems.generateElement(new ElementData(
@@ -214,12 +215,13 @@ public class InfiniteCraftProcess {
     }
 
     /**
-     * Get ItemStack from an NBT Stringb
+     * Get ItemStack from an NBT String
+     * Needs the world's registries: enchantments, sounds etc. are registry entries and get dropped without them
      */
-    static ItemStack parseItemStackFromNbt(String nbtString) throws RuntimeException, CommandSyntaxException {
+    static ItemStack parseItemStackFromNbt(String nbtString, RegistryWrapper.WrapperLookup registries) throws RuntimeException, CommandSyntaxException {
         InfiniteCraft.LOGGER.info("Parsing Item Stack From:\n" + nbtString);
         NbtCompound nbt = StringNbtReader.readCompound(nbtString);
-        ItemStack itemStack = ItemStack.CODEC.parse(NbtOps.INSTANCE, nbt)
+        ItemStack itemStack = ItemStack.CODEC.parse(registries.getOps(NbtOps.INSTANCE), nbt)
             .resultOrPartial(error -> {
                 // Test if the id exist
                 if (nbt.contains("id") && nbt.get("id").getType()==NbtElement.STRING_TYPE) {

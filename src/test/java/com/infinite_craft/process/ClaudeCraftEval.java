@@ -26,7 +26,9 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.StringNbtReader;
+import net.minecraft.registry.BuiltinRegistries;
 import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.util.Identifier;
 
 /**
@@ -42,10 +44,14 @@ public class ClaudeCraftEval {
 
 	private record Result(String recipe, String verdict, String detail, long millis) {}
 
+	// Stands in for a world's registries, which enchantments, sounds etc. are parsed against
+	private static RegistryWrapper.WrapperLookup registries;
+
 	@BeforeAll
 	static void bootstrap() {
 		SharedConstants.createGameVersion();
 		Bootstrap.initialize();
+		registries = BuiltinRegistries.createWrapperLookup();
 	}
 
 	private static List<Recipe> recipes() {
@@ -146,8 +152,8 @@ public class ClaudeCraftEval {
 			}
 
 			String nbt = response.get("itemNbt").getAsString();
-			boolean clean = ItemStack.CODEC.parse(NbtOps.INSTANCE, StringNbtReader.readCompound(nbt)).result().isPresent();
-			ItemStack stack = InfiniteCraftProcess.parseItemStackFromNbt(nbt);
+			boolean clean = ItemStack.CODEC.parse(registries.getOps(NbtOps.INSTANCE), StringNbtReader.readCompound(nbt)).result().isPresent();
+			ItemStack stack = InfiniteCraftProcess.parseItemStackFromNbt(nbt, registries);
 			if (stack.isEmpty()) {
 				return new Result(recipe.name, "failed", nbt, millis);
 			}
