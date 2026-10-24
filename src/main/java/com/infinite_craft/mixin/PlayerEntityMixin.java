@@ -10,18 +10,22 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import com.infinite_craft.ability.AuraAbility;
 import com.infinite_craft.ability.DashAbility;
 import com.infinite_craft.ability.ThrustAbility;
 import com.infinite_craft.element.DiscoveringPlayerData;
 import com.infinite_craft.element.PlayerEntityExt;
 
 @Mixin(PlayerEntity.class)
-public abstract class PlayerEntityMixin implements PlayerEntityExt, DashAbility.Dasher {
+public abstract class PlayerEntityMixin implements PlayerEntityExt, DashAbility.Dasher, AuraAbility.Holder {
     @Unique
     private DiscoveringPlayerData infiniteCraft$discoveringData;
 
     @Unique
     private final DashAbility.State infiniteCraft$dashState = new DashAbility.State();
+
+    @Unique
+    private final AuraAbility.State infiniteCraft$auraState = new AuraAbility.State();
 
     @Inject(method = "<init>", at = @At("TAIL"))
     public void init(CallbackInfo ci) {
@@ -32,6 +36,7 @@ public abstract class PlayerEntityMixin implements PlayerEntityExt, DashAbility.
     private void infiniteCraft$tickAbilities(CallbackInfo ci) {
         ThrustAbility.tick((PlayerEntity) (Object) this);
         DashAbility.tick((PlayerEntity) (Object) this);
+        AuraAbility.tick((PlayerEntity) (Object) this);
     }
 
     @Inject(method = "writeCustomData", at = @At("HEAD"))
@@ -53,5 +58,10 @@ public abstract class PlayerEntityMixin implements PlayerEntityExt, DashAbility.
     @Override
     public DashAbility.State infiniteCraft$dashState() {
         return infiniteCraft$dashState;
+    }
+
+    @Override
+    public AuraAbility.State infiniteCraft$auraState() {
+        return infiniteCraft$auraState;
     }
 }

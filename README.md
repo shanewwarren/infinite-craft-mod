@@ -40,7 +40,8 @@ gliders must glide, guns must fire with no ammo in the inventory, tools must min
 allowed to fail; a failure there means the prompt needs work). `ShootTest` fires the guns over real ticks at a mob.
 `BlastTest` fires explosive and lightning shots at a wall of glass, planks, wool and torches: the mobs beside it must get hurt,
 while every block, the shooter's pet wolf, an armor stand and a dropped item must come through untouched, with no fire.
-`LaunchTest` and `DashTest` run on a 48-block runway (`data/infinite-craft-test/gametest/structure/runway.snbt`), since the default
+`AuraTest` wears God Armor for a minute and checks its effects, real healing, that they come off with it, and that its aura
+hurts a husk but not a pig or a pet wolf. `LaunchTest` and `DashTest` run on a 48-block runway (`data/infinite-craft-test/gametest/structure/runway.snbt`), since the default
 test area is walled in by barriers at 8 blocks, which would cap any flight or dash at about 3 blocks.
 
 `./gradlew runClientGameTest` opens a real game window, holds right click with a Ray Gun and a Chain Gun at an iron golem,
@@ -63,6 +64,11 @@ their pets, armor stands or dropped items.
 
 `infinite_craft:dash` makes a worn (or held) item dash: press jump again in mid-air to dash the way you face.
 `{power:1.0f, charges:1}`; power 1 goes about 8 blocks, `charges` is dashes before landing again. Works on servers without `allow-flight`.
+
+`infinite_craft:aura` gives a worn (or held) item an aura: `{effects:[{id:"minecraft:regeneration",amplifier:0}], particle:"minecraft:end_rod",
+color:"gold", damage:2.0f, radius:4.0f}`. Effects stay on while it's worn (night vision without flicker, regeneration healing at its
+normal rate) and come off within half a second when it's removed; particles swirl around the wearer (dust in `color` if no `particle`);
+`damage` hurts monsters within `radius` each second, never animals, pets or players.
 
 `infinite_craft:thrust` makes a worn (or held) item a jetpack: hold jump to fly up, hold forward to zoom ahead.
 `{power:1.0f, speed:1.5f}`; power 1 climbs about 7 blocks a second. Works on servers without `allow-flight`

@@ -11,14 +11,16 @@
 			"com.infinite_craft.test.ThrustTest",
 			"com.infinite_craft.test.BlastTest",
 			"com.infinite_craft.test.LaunchTest",
-			"com.infinite_craft.test.DashTest"
+			"com.infinite_craft.test.DashTest",
+			"com.infinite_craft.test.AuraTest"
 		],
 		"fabric-client-gametest": [
 			"com.infinite_craft.test.ShootClientGameTest",
 			"com.infinite_craft.test.ItemLooksClientGameTest",
 			"com.infinite_craft.test.ThrustClientGameTest",
 			"com.infinite_craft.test.BlastClientGameTest",
-			"com.infinite_craft.test.LaunchDashClientGameTest"
+			"com.infinite_craft.test.LaunchDashClientGameTest",
+			"com.infinite_craft.test.AuraClientGameTest"
 		]
 	},
 	"depends": {

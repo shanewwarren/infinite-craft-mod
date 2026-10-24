@@ -14,6 +14,7 @@ import java.util.Optional;
 
 import com.infinite_craft.InfiniteItem;
 import com.infinite_craft.ability.Abilities;
+import com.infinite_craft.ability.AuraComponent;
 import com.infinite_craft.ability.ShootComponent;
 import com.infinite_craft.ai.AiPrompt;
 import com.infinite_craft.process.InfiniteCraftProcess;
@@ -34,6 +35,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.entity.mob.HuskEntity;
 import net.minecraft.entity.passive.PigEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
@@ -135,6 +137,7 @@ public class CraftedItemUseTest {
 		if (stack.contains(DataComponentTypes.GLIDER)) checks.add(glide(context, stack));
 		if (stack.contains(Abilities.THRUST)) checks.add(fly(context, stack));
 		if (stack.contains(Abilities.DASH)) checks.add(dash(context, stack));
+		if (stack.contains(Abilities.AURA)) checks.add(aura(context, stack));
 		if (stack.contains(Abilities.SHOOT) || stack.getItem() instanceof CrossbowItem || stack.getItem() instanceof BowItem) {
 			checks.add(shoot(context, stack));
 		}
@@ -332,6 +335,25 @@ public class CraftedItemUseTest {
 		}
 		double across = player.getEntityPos().subtract(start).horizontalLength();
 		return new Check("dash", across > 2.5, "dashed %.1f blocks jumping in mid-air".formatted(across));
+	}
+
+	// --- aura: worn, it keeps its effects on the wearer and hurts a monster close by
+
+	private static Check aura(TestContext context, ItemStack stack) {
+		AuraComponent aura = stack.get(Abilities.AURA);
+		PlayerEntity player = player(context);
+		EquippableComponent equippable = stack.get(DataComponentTypes.EQUIPPABLE);
+		player.equipStack(equippable != null ? equippable.slot() : EquipmentSlot.MAINHAND, stack.copy());
+		HuskEntity husk = context.spawnEntity(EntityType.HUSK, new Vec3d(4.5, 1, 6.5));
+		husk.setAiDisabled(true);
+		for (int t = 0; t < 41; t++) tick(player);
+		List<String> missing = aura.effects().stream().filter(effect -> !player.hasStatusEffect(effect.id()))
+			.map(effect -> effect.id().getIdAsString()).toList();
+		float hurt = husk.getMaxHealth() - husk.getHealth();
+		husk.discard();
+		boolean passed = missing.isEmpty() && (aura.damage() <= 0 || hurt > 0) && (!aura.effects().isEmpty() || aura.damage() > 0);
+		return new Check("aura", passed, "%d effects kept on%s%s".formatted(aura.effects().size(),
+			missing.isEmpty() ? "" : ", missing " + missing, aura.damage() > 0 ? ", %.0f damage to a husk in 2s".formatted(hurt) : ""));
 	}
 
 	// --- ranged: holding the trigger at a mob fires, with no ammo in the inventory.

@@ -70,7 +70,8 @@ public record ShootComponent(Kind kind, float damage, int color, int interval, i
 			.orElseGet(() -> DataResult.error(() -> "Unknown color " + name, 0xFF3030)),
 		rgb -> "#%06X".formatted(rgb));
 
-	private static final Codec<Integer> COLOR_CODEC = Codec.either(Codec.INT, COLOR_NAME_CODEC)
+	/** An RGB int, "#RRGGBB" or a color name; shared with AuraComponent */
+	static final Codec<Integer> COLOR_CODEC = Codec.either(Codec.INT, COLOR_NAME_CODEC)
 		.xmap(either -> either.map(rgb -> rgb, rgb -> rgb), Either::left);
 
 	public static final Codec<ShootComponent> CODEC = RecordCodecBuilder.create(instance -> instance.group(
