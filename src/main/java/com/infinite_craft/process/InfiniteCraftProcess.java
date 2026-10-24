@@ -216,7 +216,7 @@ public class InfiniteCraftProcess {
     /**
      * Get ItemStack from an NBT Stringb
      */
-    private static ItemStack parseItemStackFromNbt(String nbtString) throws RuntimeException, CommandSyntaxException {
+    static ItemStack parseItemStackFromNbt(String nbtString) throws RuntimeException, CommandSyntaxException {
         InfiniteCraft.LOGGER.info("Parsing Item Stack From:\n" + nbtString);
         NbtCompound nbt = StringNbtReader.readCompound(nbtString);
         ItemStack itemStack = ItemStack.CODEC.parse(NbtOps.INSTANCE, nbt)

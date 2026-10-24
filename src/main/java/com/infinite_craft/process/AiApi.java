@@ -9,6 +9,8 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
+import com.anthropic.models.beta.messages.BetaMessage;
+import com.anthropic.models.beta.messages.BetaStopReason;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
 import com.google.gson.JsonObject;
@@ -27,6 +29,8 @@ public class AiApi {
 				throw new AiProblemException("Unable to run the model because it's disabled in the config file(.\"model\")");
 			case "gemini":
 				return doPostGemini(prompt, player);
+			case "claude":
+				return doPostClaude(prompt);
 			case "ollama":
 				return doPostOllama(prompt);
 		}
@@ -41,7 +45,7 @@ public class AiApi {
 			}
 			GenerateContentResponse response =
 				geminiClient.models.generateContent(
-					"gemini-2.5-flash",
+					InfiniteCraft.config.GeminiModelName,
 					prompt,
 					InfiniteCraft.gemini.getConfig(player)
 				);
@@ -49,6 +53,29 @@ public class AiApi {
 		} catch( Exception e ){
             InfiniteCraft.LOGGER.error(e.getMessage());
 			throw e;
+		}
+    }
+    public static JsonObject doPostClaude(String prompt) throws RuntimeException {
+		if(InfiniteCraft.claude.getClient()==null){
+			throw new AiProblemException("Claude is not initialized, check \"claude\".\"api_key\" in the config file");
+		}
+		BetaMessage response = InfiniteCraft.claude.getClient().beta().messages().create(
+			InfiniteCraft.claude.buildParams(prompt)
+		);
+		InfiniteCraft.claude.logUsage(response);
+		BetaStopReason stopReason = response.stopReason().orElse(null);
+		if(BetaStopReason.REFUSAL.equals(stopReason)){
+			throw new AiProblemException("Claude declined to craft this");
+		}
+		if(BetaStopReason.MAX_TOKENS.equals(stopReason)){
+			throw new AiProblemException("Claude ran out of tokens before finishing the craft");
+		}
+		StringBuilder text = new StringBuilder();
+		response.content().forEach(block -> block.text().ifPresent(t -> text.append(t.text())));
+		try {
+			return JsonParser.parseString(text.toString()).getAsJsonObject();
+		} catch(Exception e) {
+			throw new AiProblemException("Claude returned something that isn't JSON: " + text);
 		}
     }
     public static JsonObject doPostOllama(String prompt) throws IOException, RuntimeException {

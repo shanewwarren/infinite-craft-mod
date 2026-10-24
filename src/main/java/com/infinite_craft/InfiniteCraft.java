@@ -9,6 +9,7 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.infinite_craft.ai.Claude;
 import com.infinite_craft.ai.Gemini;
 import com.infinite_craft.element.DiscoveringPlayerData;
 import com.infinite_craft.element.ElementItems;
@@ -30,6 +31,7 @@ public class InfiniteCraft implements ModInitializer {
 
 	// OpenAIClient openAIClient = null;
 	public static Gemini gemini = null;
+	public static Claude claude = null;
 
 	public static InfiniteCraftConfig config = null;
 
@@ -48,12 +50,14 @@ public class InfiniteCraft implements ModInitializer {
 		LOGGER.info("config: {}", config.toString());
 
 		gemini=new Gemini();
+		claude=new Claude();
 		InfiniteItem.initialize();
 		ElementItems.initialize();
 		PayloadTypeRegistry.playS2C().register(SendArrowProgressS2CPayload.ID, SendArrowProgressS2CPayload.CODEC);
 		InfiniteCraftFakeProgressTask.registerTickHandler();
 		config.write();
 		gemini.initClient(config);
+		claude.initClient(config);
 		DiscoveringPlayerData.register();
 
 		
