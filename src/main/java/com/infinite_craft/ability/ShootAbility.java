@@ -1,15 +1,20 @@
 package com.infinite_craft.ability;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
+import org.jetbrains.annotations.Nullable;
+
 import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.FireworksComponent;
 import net.minecraft.component.type.UseCooldownComponent;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ArrowEntity;
+import net.minecraft.entity.projectile.FireworkRocketEntity;
 import net.minecraft.entity.projectile.PersistentProjectileEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.item.ItemStack;
@@ -38,6 +43,8 @@ public class ShootAbility {
 
 	private static final double BEAM_RANGE = 48;
 	private static final float BULLET_SPEED = 3.0f;
+	// slow enough to watch fly; with flight duration 2 a rocket bursts after 30 to 41 ticks, 45 to 60 blocks out
+	private static final float ROCKET_SPEED = 1.5f;
 
 	// When each player last fired, by player age. One map per side: in singleplayer the client's and the server's
 	// player are equal (entities compare by network id), and the client's clock must not hold back the server's shot
@@ -58,10 +65,14 @@ public class ShootAbility {
 				switch (shoot.kind()) {
 					case BEAM -> fireBeam(serverWorld, user, stack, shoot);
 					case BULLET -> fireBullet(serverWorld, user, stack, shoot);
+					case ROCKET -> fireRocket(serverWorld, user, shoot);
 				}
 			}
-			SoundEvent sound = shoot.sound().map(entry -> entry.value()).orElse(
-				shoot.kind() == ShootComponent.Kind.BEAM ? SoundEvents.ENTITY_ILLUSIONER_CAST_SPELL : SoundEvents.ITEM_CROSSBOW_SHOOT);
+			SoundEvent sound = shoot.sound().map(entry -> entry.value()).orElse(switch (shoot.kind()) {
+				case BEAM -> SoundEvents.ENTITY_ILLUSIONER_CAST_SPELL;
+				case BULLET -> SoundEvents.ITEM_CROSSBOW_SHOOT;
+				case ROCKET -> SoundEvents.ENTITY_FIREWORK_ROCKET_SHOOT;
+			});
 			world.playSound(null, user.getX(), user.getY(), user.getZ(), sound, SoundCategory.PLAYERS, 0.8f,
 				0.9f + world.getRandom().nextFloat() * 0.2f);
 		}
@@ -86,6 +97,9 @@ public class ShootAbility {
 		if (entityHit != null) {
 			end = entityHit.getPos();
 			hit(world, user, entityHit.getEntity(), shoot);
+			Blast.at(world, entityHit.getEntity().getEntityPos(), shoot, null, user, entityHit.getEntity());
+		} else if (blockHit.getType() != HitResult.Type.MISS) {
+			Blast.at(world, end, shoot, null, user, null);
 		}
 
 		DustParticleEffect dust = new DustParticleEffect(shoot.color(), 1.0f);
@@ -125,6 +139,29 @@ public class ShootAbility {
 		world.spawnParticles(new DustParticleEffect(shoot.color(), 0.6f), muzzle.x, muzzle.y - 0.15, muzzle.z, 3, 0.05, 0.05, 0.05, 0);
 	}
 
+	/** A firework that flies straight and carries the gun's settings in its item, so a saved world keeps them */
+	private static void fireRocket(ServerWorld world, PlayerEntity user, ShootComponent shoot) {
+		ItemStack rocketItem = new ItemStack(Items.FIREWORK_ROCKET);
+		rocketItem.set(DataComponentTypes.FIREWORKS, new FireworksComponent(2, List.of()));
+		rocketItem.set(Abilities.SHOOT, shoot);
+		FireworkRocketEntity rocket = new FireworkRocketEntity(world, rocketItem, user, user.getX(), user.getEyeY() - 0.15, user.getZ(), true);
+		rocket.setVelocity(user, user.getPitch(), user.getYaw(), 0, ROCKET_SPEED, shoot.spread());
+		world.spawnEntity(rocket);
+	}
+
+	/** Rockets: called by FireworkRocketEntityMixin when one hits a mob */
+	public static void onRocketHitEntity(ServerWorld world, FireworkRocketEntity rocket, ShootComponent shoot, Entity target) {
+		Entity shooter = rocket.getOwner();
+		if (target instanceof LivingEntity living) {
+			living.timeUntilRegen = 0;
+		}
+		if (shoot.fire()) {
+			target.setOnFireFor(5);
+		}
+		target.damage(world, world.getDamageSources().fireworks(rocket, shooter), shoot.damage());
+		Blast.at(world, rocket.getEntityPos(), shoot, rocket, shooter, target);
+	}
+
 	private static Vec3d aim(PlayerEntity user, float spread) {
 		if (spread <= 0) {
 			return user.getRotationVector();
@@ -134,10 +171,16 @@ public class ShootAbility {
 		return Vec3d.fromPolar(pitch, yaw);
 	}
 
-	/** Bullet arrows: called by PersistentProjectileEntityMixin */
+	/** Bullet arrows: called by PersistentProjectileEntityMixin before the arrow hurts what it hit */
 	public static void onBulletHitEntity(Entity target) {
 		if (target instanceof LivingEntity living) {
 			living.timeUntilRegen = 0;
 		}
+	}
+
+	/** The gun that fired a bullet arrow, which carries its shoot settings */
+	public static @Nullable ShootComponent bulletShoot(PersistentProjectileEntity bullet) {
+		ItemStack gun = bullet.getWeaponStack();
+		return gun == null ? null : gun.get(Abilities.SHOOT);
 	}
 }

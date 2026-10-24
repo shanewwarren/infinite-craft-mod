@@ -83,6 +83,8 @@ public class ClaudeCraftEval {
 			new Recipe("wish: Mega Puncher", List.of(named(Items.PISTON, "Mega Puncher"), new ItemStack(Items.SLIME_BALL))),
 			new Recipe("wish: Nail Gun", List.of(named(Items.IRON_NUGGET, "Nail Gun"), new ItemStack(Items.IRON_INGOT))),
 			new Recipe("wish: Chain Gun", List.of(named(Items.IRON_BLOCK, "Chain Gun"), new ItemStack(Items.GUNPOWDER))),
+			new Recipe("wish: Rocket Launcher", List.of(named(Items.IRON_INGOT, "Rocket Launcher"), new ItemStack(Items.TNT))),
+			new Recipe("wish: Thor's Hammer", List.of(named(Items.IRON_BLOCK, "Thor's Hammer"), new ItemStack(Items.STICK))),
 			new Recipe("wish: Steam Armor", List.of(named(Items.IRON_CHESTPLATE, "Steam Armor"), new ItemStack(Items.WATER_BUCKET))),
 			new Recipe("wish: God Armor", List.of(named(Items.DIAMOND_CHESTPLATE, "God Armor"), new ItemStack(Items.GOLDEN_APPLE)))
 		);
@@ -102,8 +104,9 @@ public class ClaudeCraftEval {
 		"infinite_craft:shoot", "infinite_craft:thrust"
 	);
 
-	// The video's guns: each should shoot with no ammo, and feel different from the others
-	private static final List<String> GUN_WISHES = List.of("wish: Ray Gun", "wish: Nail Gun", "wish: Chain Gun");
+	// The video's guns: each should shoot with no ammo, and feel different from the others; the last two should blast
+	private static final List<String> GUN_WISHES = List.of("wish: Ray Gun", "wish: Nail Gun", "wish: Chain Gun",
+		"wish: Rocket Launcher", "wish: Thor's Hammer");
 
 	/** How a gun result shoots, e.g. `beam 6 dmg every 10t`, or why it doesn't shoot without ammo */
 	static String gunSummary(String nbt) throws Exception {
@@ -111,8 +114,9 @@ public class ClaudeCraftEval {
 		Optional<NbtCompound> shoot = components.getCompound("infinite_craft:shoot");
 		if (shoot.isEmpty()) return "no shoot (needs ammo)";
 		NbtCompound s = shoot.get();
-		return "%s %s dmg every %st%s%s".formatted(s.getString("kind").orElse("beam"), s.get("damage"), s.get("interval"),
-			s.contains("count") ? " ×" + s.get("count") : "", s.contains("spread") ? " spread " + s.get("spread") : "");
+		return "%s %s dmg every %st%s%s%s%s".formatted(s.getString("kind").orElse("beam"), s.get("damage"), s.get("interval"),
+			s.contains("count") ? " ×" + s.get("count") : "", s.contains("spread") ? " spread " + s.get("spread") : "",
+			s.contains("explode") ? " explode " + s.get("explode") : "", s.getBoolean("lightning").orElse(false) ? " lightning" : "");
 	}
 
 	/** The item_model a result asks for, if any */

@@ -203,6 +203,12 @@ public class AiPrompt {
 		// rapid-fire bullet gun
 		"""
 		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:minigun","minecraft:item_name":{text:"Minigun",color:"gray"},"minecraft:max_stack_size":1,"infinite_craft:shoot":{kind:"bullet",damage:3.0f,color:"gold",interval:4,spread:3.0f}}}""",
+		// explosive launcher: rockets fly visibly and blow up mobs where they land
+		"""
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:rocket_launcher","minecraft:item_name":{text:"Rocket Launcher",color:"dark_green"},"minecraft:max_stack_size":1,"infinite_craft:shoot":{kind:"rocket",damage:8.0f,explode:3.0f,interval:30}}}""",
+		// melee weapon that also calls lightning on right click
+		"""
+		{id:"minecraft:mace",count:1i,components:{"minecraft:item_name":{text:"Thor's Hammer",color:"aqua"},"minecraft:enchantments":{"minecraft:wind_burst":1},"infinite_craft:shoot":{kind:"beam",damage:6.0f,color:"aqua",interval:30,lightning:true}}}""",
 		// flying wearable
 		"""
 		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:jetpack","minecraft:item_name":{text:"Jetpack",color:"yellow"},"minecraft:max_stack_size":1,"minecraft:equippable":{slot:"chest",asset_id:"infinite_craft:jetpack"},"infinite_craft:thrust":{power:1.0f,speed:1.5f},"minecraft:attribute_modifiers":[{type:"minecraft:safe_fall_distance",id:"infinite_craft:jetpack_landing",amount:20.0d,operation:"add_value",slot:"chest"}]}}""",
@@ -247,13 +253,17 @@ public class AiPrompt {
 			\t\tFood, drinks, potions: "minecraft:consumable" with on_consume_effects (apply_effects, teleport_randomly, clear_all_effects), optionally "minecraft:food"
 			\t\tMelee weapons: "minecraft:weapon" plus attack_damage / attack_speed / attack_knockback attribute modifiers on mainhand
 			\t\tAnything that shoots (guns, blasters, ray guns, lasers, wands, launchers, magic bows): "infinite_craft:shoot", this mod's component. It fires with NO ammo while right click is held.
-			\t\t\tFields: kind ("beam": instant colored ray, for lasers, ray guns, wands; "bullet": fast projectile, for nail guns, machine guns, shotguns, bows),
+			\t\t\tFields: kind ("beam": instant colored ray, for lasers, ray guns, wands; "bullet": fast projectile, for nail guns, machine guns, shotguns, bows;
+			\t\t\t"rocket": a slower rocket you can watch fly, which always explodes, for rocket launchers, bazookas, grenade and firework launchers),
 			\t\t\tdamage (per hit; a zombie has 20 health, a diamond sword does 7), interval (ticks between shots: 4 is the fastest, 20 is once a second),
 			\t\t\tcount (shots per pull, e.g. 5 for a shotgun), spread (aim error in degrees), color (a color name or "#RRGGBB"), fire (true sets targets on fire), optional sound.
+			\t\t\tBlasts where a shot lands: explode (explosion power 1 to 4: 2 a grenade, 3 a creeper, 4 TNT; for rocket launchers, TNT guns, grenade launchers, explosive arrows)
+			\t\t\tand lightning (true: lightning strikes there; for Thor's hammer, smite wands, storm staffs). They hurt mobs but never break blocks, start fires or hurt the shooter.
+			\t\t\tKeep blasting guns slow (interval 20 or more): a blast every shot is chaos.
 			\t\t\tsound plays on EVERY shot, so leave it out (beams zap, bullets click) or pick a short one like "minecraft:entity.blaze.shoot"; never explosions or long sounds like beacon or music.
 			\t\t\tMake different guns feel different: a chain gun fires every 4 ticks with some spread, a ray gun is a colored beam, a shotgun fires several bullets with wide spread, a sniper is slow and hits hard.
 			\t\t\tGive it a fitting "minecraft:item_model" on infinite_craft:custom_crafted_item. A vanilla bow or crossbow alone needs arrows the player may not have, so add "infinite_craft:shoot" to those too.
-			\t\tPunchers, hammers: minecraft:mace (wind_burst, density, breach) or a big attack_knockback modifier
+			\t\tPunchers, hammers: minecraft:mace (wind_burst, density, breach) or a big attack_knockback modifier. A magic hammer can also shoot, like Thor's hammer calling lightning.
 			\t\tArmor and wearables: a vanilla armor base or "minecraft:equippable", with armor, max_health, movement_speed, jump_strength, scale, safe_fall_distance modifiers on that slot.
 			\t\t\tAttribute modifiers REPLACE the base armor's own stats, so give at least the base item's armor and toughness (e.g. iron chestplate 6 armor, diamond chestplate 8 armor + 2 toughness) plus the extras.
 			\t\tFlying under power (jetpacks, rocket boots, flying armor): "infinite_craft:thrust", this mod's component, on an item with "minecraft:equippable".

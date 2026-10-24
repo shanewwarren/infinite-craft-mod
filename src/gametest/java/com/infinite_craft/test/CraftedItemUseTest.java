@@ -329,15 +329,19 @@ public class CraftedItemUseTest {
 		List<ProjectileEntity> fired = context.getWorld().getEntitiesByClass(ProjectileEntity.class, around, e -> !before.contains(e));
 		fired.forEach(ProjectileEntity::discard);
 		float damage = dummy.getMaxHealth() - dummy.getHealth();
+		// lightning turns a pig into a zombified piglin, which removes the pig
+		boolean transformed = dummy.isRemoved();
+		context.getWorld().getEntitiesByClass(LivingEntity.class, around, e -> !(e instanceof PlayerEntity)).forEach(LivingEntity::discard);
 		dummy.discard();
 
 		ShootComponent shoot = stack.get(Abilities.SHOOT);
 		// a no-ammo gun keeps firing; a vanilla crossbow fires what it was loaded with
 		boolean passed = shoot == null
 			? !fired.isEmpty()
-			: fired.size() >= 2 || damage >= 2 * shoot.damage() - 0.01;
-		return new Check("shoot", passed, "%d projectiles%s, %.0f beam damage to a mob in %ds, no ammo".formatted(
-			fired.size(), fired.isEmpty() ? "" : " (" + EntityType.getId(fired.get(0).getType()).getPath() + ")", damage, TRIGGER_TICKS / 20));
+			: fired.size() >= 2 || damage >= 2 * shoot.damage() - 0.01 || transformed;
+		return new Check("shoot", passed, "%d projectiles%s, %.0f beam damage to a mob in %ds%s, no ammo".formatted(
+			fired.size(), fired.isEmpty() ? "" : " (" + EntityType.getId(fired.get(0).getType()).getPath() + ")", damage, TRIGGER_TICKS / 20,
+			transformed ? " (struck by lightning, it transformed)" : ""));
 	}
 
 	/** One tick of a player holding right click: the client repeats use every 4 ticks, and a drawn bow or crossbow is released */

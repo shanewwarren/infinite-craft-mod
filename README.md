@@ -38,15 +38,21 @@ drinks must apply their effects, weapons must hurt or launch a mob, armor must c
 gliders must glide, guns must fire with no ammo in the inventory, tools must mine faster. Reports land in `build/gametest/`:
 `prompt-examples.md` (the prompt's own examples, must all work) and `eval-items.md` (what Claude made in the last eval run, reported but
 allowed to fail; a failure there means the prompt needs work). `ShootTest` fires the guns over real ticks at a mob.
+`BlastTest` fires explosive and lightning shots at a wall of glass, planks, wool and torches: the mobs beside it must get hurt,
+while every block, the shooter's pet wolf, an armor stand and a dropped item must come through untouched, with no fire.
 
 `./gradlew runClientGameTest` opens a real game window, holds right click with a Ray Gun and a Chain Gun at an iron golem,
-checks the golem got hurt and saves screenshots to `build/run/clientGameTest/screenshots`.
+checks the golem got hurt and saves screenshots to `build/run/clientGameTest/screenshots`. It also fires a rocket and a lightning wand
+at a golem, and a rocket point-blank into a glass wall, which must leave the player and the wall unharmed.
 
 ### Mod abilities Claude can give items
 
 `infinite_craft:shoot` makes any item fire while right click is held, with no ammo:
-`{kind:"beam"|"bullet", damage:6.0f, interval:10, count:1, spread:0.0f, color:"green", fire:false, sound:"minecraft:..."}`.
+`{kind:"beam"|"bullet"|"rocket", damage:6.0f, interval:10, count:1, spread:0.0f, color:"green", fire:false, sound:"minecraft:..."}`.
 `interval` is ticks between shots (4 is the fastest), `count` is shots per pull (shotguns). Respects `minecraft:use_cooldown`.
+`kind:"rocket"` fires a slower firework-like rocket that always explodes. `explode:2.0f` (power 0 to 4) blows up where any shot lands,
+`lightning:true` calls lightning there. Blasts hurt mobs only: they never break blocks, start fires, charge creepers or hurt the shooter,
+their pets, armor stands or dropped items.
 
 `infinite_craft:thrust` makes a worn (or held) item a jetpack: hold jump to fly up, hold forward to zoom ahead.
 `{power:1.0f, speed:1.5f}`; power 1 climbs about 7 blocks a second. Works on servers without `allow-flight`

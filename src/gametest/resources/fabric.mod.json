@@ -8,12 +8,14 @@
 		"fabric-gametest": [
 			"com.infinite_craft.test.CraftedItemUseTest",
 			"com.infinite_craft.test.ShootTest",
-			"com.infinite_craft.test.ThrustTest"
+			"com.infinite_craft.test.ThrustTest",
+			"com.infinite_craft.test.BlastTest"
 		],
 		"fabric-client-gametest": [
 			"com.infinite_craft.test.ShootClientGameTest",
 			"com.infinite_craft.test.ItemLooksClientGameTest",
-			"com.infinite_craft.test.ThrustClientGameTest"
+			"com.infinite_craft.test.ThrustClientGameTest",
+			"com.infinite_craft.test.BlastClientGameTest"
 		]
 	},
 	"depends": {
