@@ -28,6 +28,7 @@ import net.minecraft.entity.passive.WolfEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.test.TestContext;
 import net.minecraft.text.Text;
 import net.minecraft.util.Hand;
@@ -35,15 +36,24 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 
 /**
- * Explosive and lightning shots (infinite_craft:shoot explode / lightning) hurt mobs around where they land,
- * but never the player's build: every block in a wall of glass, planks, wool and torches is still there,
- * no fire appears, and the shooter's pet, dropped items and armor stands are untouched.
+ * Explosive and lightning shots (infinite_craft:shoot explode / lightning) hurt mobs around where they land.
+ * With destroy:false (the default for beams and bullets) they leave the player's build alone: every block in a wall
+ * of glass, planks, wool and torches is still there. With destroy:true (the default for rockets) they blow holes in it,
+ * unless the world's infiniteCraftBlastsBreakBlocks gamerule is off. Either way no fire appears, and the shooter's pet,
+ * dropped items and armor stands are untouched.
  * Mock players aren't in the world, so a blast can't reach the shooter here; BlastClientGameTest checks that
  */
 public class BlastTest {
 
 	private static final String ROCKET_LAUNCHER = """
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:rocket_launcher","infinite_craft:shoot":{kind:"rocket",damage:6.0f,explode:2.0f,interval:20,destroy:false}}}""";
+
+	// rockets break blocks unless told not to
+	private static final String WRECKING_ROCKET_LAUNCHER = """
 		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:rocket_launcher","infinite_craft:shoot":{kind:"rocket",damage:6.0f,explode:2.0f,interval:20}}}""";
+
+	private static final String WRECKING_TNT_GUN = """
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:iron_ingot","infinite_craft:shoot":{kind:"bullet",damage:4.0f,explode:2.0f,interval:10,destroy:true}}}""";
 
 	private static final String TNT_GUN = """
 		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:iron_ingot","infinite_craft:shoot":{kind:"bullet",damage:4.0f,explode:2.0f,interval:10}}}""";
@@ -60,22 +70,38 @@ public class BlastTest {
 
 	@GameTest(maxTicks = 80)
 	public void rocketBlastHurtsMobsAroundButNotTheBuild(TestContext context) {
-		blastAtWall(context, ROCKET_LAUNCHER);
+		blastAtWall(context, ROCKET_LAUNCHER, false);
 	}
 
 	@GameTest(maxTicks = 80)
 	public void explosiveBulletHurtsMobsAroundButNotTheBuild(TestContext context) {
-		blastAtWall(context, TNT_GUN);
+		blastAtWall(context, TNT_GUN, false);
 	}
 
 	@GameTest(maxTicks = 80)
 	public void explosiveBeamHurtsMobsAroundButNotTheBuild(TestContext context) {
-		blastAtWall(context, BLAST_RAY);
+		blastAtWall(context, BLAST_RAY, false);
 	}
 
 	@GameTest(maxTicks = 80)
 	public void lightningHurtsMobsAroundButStartsNoFire(TestContext context) {
-		blastAtWall(context, SMITE_WAND);
+		blastAtWall(context, SMITE_WAND, false);
+	}
+
+	@GameTest(maxTicks = 80)
+	public void rocketBlowsHolesInTheBuild(TestContext context) {
+		blastAtWall(context, WRECKING_ROCKET_LAUNCHER, true);
+	}
+
+	@GameTest(maxTicks = 80)
+	public void destroyingBulletBlowsHolesInTheBuild(TestContext context) {
+		blastAtWall(context, WRECKING_TNT_GUN, true);
+	}
+
+	/** The parent's off switch: /gamerule infiniteCraftBlastsBreakBlocks false keeps every block, even for rockets */
+	@GameTest(maxTicks = 80, environment = "infinite-craft-test:blasts_keep_blocks")
+	public void gameruleOffKeepsTheBuild(TestContext context) {
+		blastAtWall(context, WRECKING_ROCKET_LAUNCHER, false);
 	}
 
 	@GameTest(maxTicks = 80)
@@ -102,9 +128,10 @@ public class BlastTest {
 
 	/**
 	 * A wall of fragile blocks, mobs beside the impact point (not in the line of fire), and the shooter's own pet,
-	 * a dropped item and an armor stand just as close. The shooter fires at the wall for a second
+	 * a dropped item and an armor stand just as close. The shooter fires at the wall for a second.
+	 * breaksBuild: the wall must have holes in it afterwards; otherwise every block must be unchanged
 	 */
-	private static void blastAtWall(TestContext context, String nbt) {
+	private static void blastAtWall(TestContext context, String nbt, boolean breaksBuild) {
 		floor(context);
 		for (int x = 2; x <= 6; x++) {
 			for (int y = 1; y <= 4; y++) {
@@ -156,10 +183,21 @@ public class BlastTest {
 			if (!creeper.isRemoved() && creeper.isCharged()) problems.add("a creeper got charged (its blast would break blocks)");
 
 			Map<BlockPos, BlockState> after = blocks(context);
-			before.forEach((pos, state) -> {
-				if (!after.get(pos).equals(state)) problems.add("block at %s changed from %s to %s".formatted(pos.toShortString(),
-					state.getBlock().getName().getString(), after.get(pos).getBlock().getName().getString()));
+			after.forEach((pos, state) -> {
+				if (state.isIn(BlockTags.FIRE)) problems.add("fire at " + pos.toShortString());
 			});
+			if (breaksBuild) {
+				long holes = before.keySet().stream()
+					.filter(pos -> pos.getZ() == 7 && !before.get(pos).isAir() && after.get(pos).isAir())
+					.count();
+				System.out.printf("[BlastTest] %s blew %d of 20 blocks out of the wall%n", nbt.contains("rocket") ? "rocket" : "bullet", holes);
+				if (holes < 3) problems.add("only %d of the wall's 20 blocks were broken".formatted(holes));
+			} else {
+				before.forEach((pos, state) -> {
+					if (!after.get(pos).equals(state)) problems.add("block at %s changed from %s to %s".formatted(pos.toShortString(),
+						state.getBlock().getName().getString(), after.get(pos).getBlock().getName().getString()));
+				});
+			}
 			context.assertTrue(problems.isEmpty(), Text.literal(String.join("; ", problems)));
 			context.complete();
 		});

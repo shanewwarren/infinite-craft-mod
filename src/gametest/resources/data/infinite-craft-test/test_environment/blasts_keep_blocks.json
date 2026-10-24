@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:game_rules",
+  "bool_rules": [
+    {"rule": "infiniteCraftBlastsBreakBlocks", "value": false}
+  ],
+  "int_rules": []
+}

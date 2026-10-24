@@ -35,12 +35,14 @@ import net.minecraft.util.math.MathHelper;
  * @param spread   random aim error in degrees
  * @param fire     sets what it hits on fire
  * @param explode  explosion power where a shot lands (2 is a fireball, 3 a creeper, 4 TNT); 0 is none.
- *                 Hurts mobs but never blocks, the shooter or their pets
+ *                 Hurts mobs but never the shooter or their pets, and never starts fires
  * @param lightning lightning strikes where a shot lands, without starting fires
+ * @param destroy  the explosion breaks blocks like TNT; defaults to true for rockets and false otherwise.
+ *                 The world's infiniteCraftBlastsBreakBlocks gamerule can switch it off everywhere
  * @param sound    sound when firing; defaults by kind
  */
 public record ShootComponent(Kind kind, float damage, int color, int interval, int count, float spread, boolean fire,
-	float explode, boolean lightning, Optional<RegistryEntry<SoundEvent>> sound)
+	float explode, boolean lightning, boolean destroy, Optional<RegistryEntry<SoundEvent>> sound)
 	implements TooltipAppender {
 
 	public ShootComponent {
@@ -84,8 +86,11 @@ public record ShootComponent(Kind kind, float damage, int color, int interval, i
 		Codec.BOOL.optionalFieldOf("fire", false).forGetter(ShootComponent::fire),
 		Codec.FLOAT.optionalFieldOf("explode", 0.0f).forGetter(ShootComponent::explode),
 		Codec.BOOL.optionalFieldOf("lightning", false).forGetter(ShootComponent::lightning),
+		Codec.BOOL.optionalFieldOf("destroy").forGetter(shoot -> Optional.of(shoot.destroy())),
 		SoundEvent.ENTRY_CODEC.optionalFieldOf("sound").forGetter(ShootComponent::sound)
-	).apply(instance, ShootComponent::new));
+	).apply(instance, (kind, damage, color, interval, count, spread, fire, explode, lightning, destroy, sound) ->
+		// a rocket launcher is expected to wreck things; a ray gun with a small blast isn't
+		new ShootComponent(kind, damage, color, interval, count, spread, fire, explode, lightning, destroy.orElse(kind == Kind.ROCKET), sound)));
 
 	@Override
 	public void appendTooltip(Item.TooltipContext context, Consumer<Text> textConsumer, TooltipType type, ComponentsAccess components) {
@@ -103,7 +108,9 @@ public record ShootComponent(Kind kind, float damage, int color, int interval, i
 			textConsumer.accept(Text.translatableWithFallback("item.infinite_craft.shoot.fire", "Sets targets on fire").formatted(Formatting.GOLD));
 		}
 		if (explode > 0) {
-			textConsumer.accept(Text.translatableWithFallback("item.infinite_craft.shoot.explode", "Explodes where it hits").formatted(Formatting.RED));
+			textConsumer.accept(destroy
+				? Text.translatableWithFallback("item.infinite_craft.shoot.explode_destroy", "Explodes where it hits, breaking blocks").formatted(Formatting.DARK_RED)
+				: Text.translatableWithFallback("item.infinite_craft.shoot.explode", "Explodes where it hits").formatted(Formatting.RED));
 		}
 		if (lightning) {
 			textConsumer.accept(Text.translatableWithFallback("item.infinite_craft.shoot.lightning", "Calls down lightning").formatted(Formatting.YELLOW));

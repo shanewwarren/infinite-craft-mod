@@ -2,6 +2,9 @@ package com.infinite_craft.ability;
 
 import org.jetbrains.annotations.Nullable;
 
+import net.fabricmc.fabric.api.gamerule.v1.GameRuleFactory;
+import net.fabricmc.fabric.api.gamerule.v1.GameRuleRegistry;
+
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -16,16 +19,26 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.BlockView;
+import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
 import net.minecraft.world.explosion.Explosion;
 import net.minecraft.world.explosion.ExplosionBehavior;
 
 /**
- * Explosions and lightning where a shot from {@link ShootComponent} lands. They hurt mobs and never the player's world:
- * no broken blocks, no fire, and nothing that isn't a mob (dropped items, item frames, armor stands).
+ * Explosions and lightning where a shot from {@link ShootComponent} lands. They hurt mobs, and break blocks like TNT
+ * only when the shot has destroy and the world's {@link #BREAK_BLOCKS} gamerule allows it. They never start fires
+ * and never hurt anything that isn't a mob (dropped items, item frames, armor stands).
  * The shooter and their pets are safe too, so point-blank rockets are fun rather than fatal
  */
 public class Blast {
+
+	/** The off switch for anyone who wants their builds safe: /gamerule infiniteCraftBlastsBreakBlocks false */
+	public static final GameRules.Key<GameRules.BooleanRule> BREAK_BLOCKS = GameRuleRegistry.register(
+		"infiniteCraftBlastsBreakBlocks", GameRules.Category.MISC, GameRuleFactory.createBooleanRule(true));
+
+	/** Registers the gamerule; called from mod init */
+	public static void initialize() {
+	}
 
 	/**
 	 * @param source    the projectile that landed, or null for a beam
@@ -38,9 +51,11 @@ public class Blast {
 			living.timeUntilRegen = 0;
 		}
 		if (shoot.explode() > 0) {
-			// NONE keeps every block; createFire false places no fire
-			world.createExplosion(source, world.getDamageSources().explosion(source, shooter), new SafeBlast(shooter),
-				pos.x, pos.y, pos.z, shoot.explode(), false, World.ExplosionSourceType.NONE);
+			boolean destroy = shoot.destroy() && world.getGameRules().getBoolean(BREAK_BLOCKS);
+			// TNT breaks blocks and drops them all (unless tntExplosionDropDecay is on); NONE keeps every block.
+			// createFire false places no fire either way
+			world.createExplosion(source, world.getDamageSources().explosion(source, shooter), new SafeBlast(shooter, destroy),
+				pos.x, pos.y, pos.z, shoot.explode(), false, destroy ? World.ExplosionSourceType.TNT : World.ExplosionSourceType.NONE);
 		}
 		if (shoot.lightning()) {
 			strikeLightning(world, pos, shooter);
@@ -89,18 +104,20 @@ public class Blast {
 		return true;
 	}
 
-	/** Damages and pushes only fair game; leaves every block in place */
+	/** Damages and pushes only fair game; breaks blocks only when destroy is on */
 	private static class SafeBlast extends ExplosionBehavior {
 
 		private final @Nullable Entity shooter;
+		private final boolean destroy;
 
-		SafeBlast(@Nullable Entity shooter) {
+		SafeBlast(@Nullable Entity shooter, boolean destroy) {
 			this.shooter = shooter;
+			this.destroy = destroy;
 		}
 
 		@Override
 		public boolean canDestroyBlock(Explosion explosion, BlockView world, BlockPos pos, BlockState state, float power) {
-			return false;
+			return destroy && super.canDestroyBlock(explosion, world, pos, state, power);
 		}
 
 		@Override

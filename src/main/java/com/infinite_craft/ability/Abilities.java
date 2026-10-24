@@ -52,5 +52,6 @@ public class Abilities {
 		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, DASH);
 		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, AURA);
 		LaunchAbility.initialize();
+		Blast.initialize();
 	}
 }

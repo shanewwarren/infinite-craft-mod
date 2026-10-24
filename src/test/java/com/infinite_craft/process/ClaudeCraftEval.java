@@ -115,9 +115,12 @@ public class ClaudeCraftEval {
 		Optional<NbtCompound> shoot = components.getCompound("infinite_craft:shoot");
 		if (shoot.isEmpty()) return "no shoot (needs ammo)";
 		NbtCompound s = shoot.get();
+		boolean destroys = s.getBoolean("destroy").orElse(s.getString("kind").orElse("beam").equals("rocket"));
 		return "%s %s dmg every %st%s%s%s%s".formatted(s.getString("kind").orElse("beam"), s.get("damage"), s.get("interval"),
 			s.contains("count") ? " ×" + s.get("count") : "", s.contains("spread") ? " spread " + s.get("spread") : "",
-			s.contains("explode") ? " explode " + s.get("explode") : "", s.getBoolean("lightning").orElse(false) ? " lightning" : "");
+			s.contains("explode") || s.getString("kind").orElse("").equals("rocket")
+				? " explode " + s.get("explode") + (destroys ? " (breaks blocks)" : "") : "",
+			s.getBoolean("lightning").orElse(false) ? " lightning" : "");
 	}
 
 	/** The item_model a result asks for, if any */

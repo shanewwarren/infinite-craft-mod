@@ -39,14 +39,17 @@ gliders must glide, guns must fire with no ammo in the inventory, tools must min
 `prompt-examples.md` (the prompt's own examples, must all work) and `eval-items.md` (what Claude made in the last eval run, reported but
 allowed to fail; a failure there means the prompt needs work). `ShootTest` fires the guns over real ticks at a mob.
 `BlastTest` fires explosive and lightning shots at a wall of glass, planks, wool and torches: the mobs beside it must get hurt,
-while every block, the shooter's pet wolf, an armor stand and a dropped item must come through untouched, with no fire.
+while the shooter's pet wolf, an armor stand and a dropped item must come through untouched, with no fire. Shots without destroy
+must leave every block in place; rockets and destroy:true shots must blow holes in the wall, unless the gamerule is off
+(the `blasts_keep_blocks` test environment).
 `AuraTest` wears God Armor for a minute and checks its effects, real healing, that they come off with it, and that its aura
 hurts a husk but not a pig or a pet wolf. `LaunchTest` and `DashTest` run on a 48-block runway (`data/infinite-craft-test/gametest/structure/runway.snbt`), since the default
 test area is walled in by barriers at 8 blocks, which would cap any flight or dash at about 3 blocks.
 
 `./gradlew runClientGameTest` opens a real game window, holds right click with a Ray Gun and a Chain Gun at an iron golem,
 checks the golem got hurt and saves screenshots to `build/run/clientGameTest/screenshots`. It also fires a rocket and a lightning wand
-at a golem, and a rocket point-blank into a glass wall, which must leave the player and the wall unharmed. It punches an iron golem
+at a golem, and a rocket point-blank into a glass wall, which must blow a hole in the wall but leave the player unharmed
+(and leave the wall whole with the gamerule off). It punches an iron golem
 with a Mega Puncher, dashes in singleplayer, and triple-dashes on a dedicated server without `allow-flight`, where the server must agree
 with the client on where the player ended up.
 
@@ -56,8 +59,10 @@ with the client on where the player ended up.
 `{kind:"beam"|"bullet"|"rocket", damage:6.0f, interval:10, count:1, spread:0.0f, color:"green", fire:false, sound:"minecraft:..."}`.
 `interval` is ticks between shots (4 is the fastest), `count` is shots per pull (shotguns). Respects `minecraft:use_cooldown`.
 `kind:"rocket"` fires a slower firework-like rocket that always explodes. `explode:2.0f` (power 0 to 4) blows up where any shot lands,
-`lightning:true` calls lightning there. Blasts hurt mobs only: they never break blocks, start fires, charge creepers or hurt the shooter,
-their pets, armor stands or dropped items.
+`lightning:true` calls lightning there. `destroy:true` makes the explosion break blocks like TNT; rockets do unless they have
+`destroy:false`, other shots don't unless they have `destroy:true`. To keep builds safe in a world, run
+`/gamerule infiniteCraftBlastsBreakBlocks false`. Blasts never start fires, charge creepers or hurt the shooter,
+their pets, armor stands or dropped items, and lightning never breaks blocks.
 
 `infinite_craft:launch` makes a melee hit fling the mob away in an arc with a cloud trail, even mobs that resist knockback:
 `{power:2.0f, up:0.8f}`; power 1 lands a pig about 10 blocks away, 3 about 30; up 0 skims the ground, 2 goes nearly straight up.
