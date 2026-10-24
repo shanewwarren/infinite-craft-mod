@@ -39,11 +39,18 @@ public class Abilities {
 		ComponentType.<DashComponent>builder().codec(DashComponent.CODEC).build()
 	);
 
+	public static final ComponentType<AuraComponent> AURA = Registry.register(
+		Registries.DATA_COMPONENT_TYPE,
+		Identifier.of(InfiniteCraft.MOD_ID, "aura"),
+		ComponentType.<AuraComponent>builder().codec(AuraComponent.CODEC).build()
+	);
+
 	public static void initialize() {
 		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, SHOOT);
 		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, THRUST);
 		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, LAUNCH);
 		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, DASH);
+		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, AURA);
 		LaunchAbility.initialize();
 	}
 }
