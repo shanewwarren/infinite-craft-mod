@@ -85,6 +85,7 @@ public class ClaudeCraftEval {
 			new Recipe("wish: Chain Gun", List.of(named(Items.IRON_BLOCK, "Chain Gun"), new ItemStack(Items.GUNPOWDER))),
 			new Recipe("wish: Rocket Launcher", List.of(named(Items.IRON_INGOT, "Rocket Launcher"), new ItemStack(Items.TNT))),
 			new Recipe("wish: Thor's Hammer", List.of(named(Items.IRON_BLOCK, "Thor's Hammer"), new ItemStack(Items.STICK))),
+			new Recipe("wish: Dash Boots", List.of(named(Items.LEATHER_BOOTS, "Dash Boots"), new ItemStack(Items.FEATHER))),
 			new Recipe("wish: Steam Armor", List.of(named(Items.IRON_CHESTPLATE, "Steam Armor"), new ItemStack(Items.WATER_BUCKET))),
 			new Recipe("wish: God Armor", List.of(named(Items.DIAMOND_CHESTPLATE, "God Armor"), new ItemStack(Items.GOLDEN_APPLE)))
 		);
@@ -101,7 +102,7 @@ public class ClaudeCraftEval {
 		"minecraft:attribute_modifiers", "minecraft:consumable", "minecraft:food", "minecraft:equippable",
 		"minecraft:glider", "minecraft:tool", "minecraft:weapon", "minecraft:enchantments", "minecraft:death_protection",
 		"minecraft:blocks_attacks", "minecraft:damage_resistant", "minecraft:charged_projectiles",
-		"infinite_craft:shoot", "infinite_craft:thrust"
+		"infinite_craft:shoot", "infinite_craft:thrust", "infinite_craft:launch", "infinite_craft:dash"
 	);
 
 	// The video's guns: each should shoot with no ammo, and feel different from the others; the last two should blast
