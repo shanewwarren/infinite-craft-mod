@@ -6,7 +6,7 @@ How we judge progress: `ClaudeCraftEval` (see README) plus, for anything our own
 
 ## Part 1: teach Claude the power toolkit (prompt only)
 
-- [x] **T1. Power toolkit prompt.** *(eval 2026-10-24: 0 inert on Opus and Haiku; follow-up prompt fixes for break-down, armor strength, held-only totems and gun variety need one more eval run)* Catalog the 1.21.10 components that give items real behavior (consumable effects, attribute modifiers, equippable, glider, tool, weapon, cooldowns) and the vanilla base items that bring behavior for free (crossbow for guns, mace for punchers, elytra for flight). Rule: every result must do something that matches its name. Every example in the prompt must parse against 1.21.10.
+- [x] **T1. Power toolkit prompt.** *(done 2026-10-24: 0 inert on both models; Opus follows all the rules and its items are video-like, Haiku follows them loosely, so stay on Opus)* Catalog the 1.21.10 components that give items real behavior (consumable effects, attribute modifiers, equippable, glider, tool, weapon, cooldowns) and the vanilla base items that bring behavior for free (crossbow for guns, mace for punchers, elytra for flight). Rule: every result must do something that matches its name. Every example in the prompt must parse against 1.21.10.
 - [x] **T2. "Does something" check + video wishes in the eval.** Flag custom items that are only a name and a model as *inert*. Add the video's items as wish recipes (an ingredient renamed in an anvil, e.g. a stick named "Ray Gun"). Target: no inert results on Opus or Haiku.
 
 ## Part 2: abilities in mod code (what vanilla can't do)
