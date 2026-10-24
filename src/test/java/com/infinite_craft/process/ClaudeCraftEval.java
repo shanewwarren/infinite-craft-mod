@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -22,13 +23,17 @@ import com.infinite_craft.element.ElementItems;
 
 import net.minecraft.Bootstrap;
 import net.minecraft.SharedConstants;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.StringNbtReader;
 import net.minecraft.registry.BuiltinRegistries;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryWrapper;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 /**
@@ -51,6 +56,8 @@ public class ClaudeCraftEval {
 	static void bootstrap() {
 		SharedConstants.createGameVersion();
 		Bootstrap.initialize();
+		InfiniteItem.initialize();
+		ElementItems.initialize();
 		registries = BuiltinRegistries.createWrapperLookup();
 	}
 
@@ -65,8 +72,70 @@ public class ClaudeCraftEval {
 			new Recipe("tnt (break down)", List.of(new ItemStack(Items.TNT))),
 			new Recipe("vanillaify + netherite ingot + feather", List.of(new ItemStack(InfiniteItem.VANILLAIFY), new ItemStack(Items.NETHERITE_INGOT), new ItemStack(Items.FEATHER))),
 			new Recipe("element water + element fire", List.of(ElementItems.ELEMENT_WATER.getDefaultStack(), ElementItems.ELEMENT_FIRE.getDefaultStack())),
-			new Recipe("element fire + iron sword", List.of(ElementItems.ELEMENT_FIRE.getDefaultStack(), new ItemStack(Items.IRON_SWORD)))
+			new Recipe("element fire + iron sword", List.of(ElementItems.ELEMENT_FIRE.getDefaultStack(), new ItemStack(Items.IRON_SWORD))),
+			// Wishes: an ingredient renamed in an anvil, like the items in the unlimited-crafting videos
+			new Recipe("wish: Prime Energy Drink", List.of(named(Items.GLASS_BOTTLE, "Prime Energy Drink"), new ItemStack(Items.SUGAR))),
+			new Recipe("wish: Jetpack", List.of(named(Items.IRON_INGOT, "Jetpack"), new ItemStack(Items.FIREWORK_ROCKET), new ItemStack(Items.LEATHER))),
+			new Recipe("wish: Blue Lightsaber", List.of(named(Items.STICK, "Blue Lightsaber"), new ItemStack(Items.DIAMOND), new ItemStack(Items.GLOWSTONE_DUST))),
+			new Recipe("wish: Ray Gun", List.of(named(Items.IRON_INGOT, "Ray Gun"), new ItemStack(Items.REDSTONE), new ItemStack(Items.EMERALD))),
+			new Recipe("wish: Disc Saw", List.of(named(Items.IRON_INGOT, "Disc Saw"), new ItemStack(Items.STONE))),
+			new Recipe("wish: Mega Puncher", List.of(named(Items.PISTON, "Mega Puncher"), new ItemStack(Items.SLIME_BALL))),
+			new Recipe("wish: Nail Gun", List.of(named(Items.IRON_NUGGET, "Nail Gun"), new ItemStack(Items.IRON_INGOT))),
+			new Recipe("wish: Chain Gun", List.of(named(Items.IRON_BLOCK, "Chain Gun"), new ItemStack(Items.GUNPOWDER))),
+			new Recipe("wish: Steam Armor", List.of(named(Items.IRON_CHESTPLATE, "Steam Armor"), new ItemStack(Items.WATER_BUCKET))),
+			new Recipe("wish: God Armor", List.of(named(Items.DIAMOND_CHESTPLATE, "God Armor"), new ItemStack(Items.GOLDEN_APPLE)))
 		);
+	}
+
+	private static ItemStack named(Item item, String name) {
+		ItemStack stack = new ItemStack(item);
+		stack.set(DataComponentTypes.CUSTOM_NAME, Text.literal(name));
+		return stack;
+	}
+
+	// Components that make an item do something when used, worn or held
+	private static final Set<String> FUNCTIONAL = Set.of(
+		"minecraft:attribute_modifiers", "minecraft:consumable", "minecraft:food", "minecraft:equippable",
+		"minecraft:glider", "minecraft:tool", "minecraft:weapon", "minecraft:enchantments", "minecraft:death_protection",
+		"minecraft:blocks_attacks", "minecraft:damage_resistant", "minecraft:charged_projectiles"
+	);
+
+	/**
+	 * Vanilla items behave like themselves; a custom item only does something through the components it was given.
+	 * Reads what the result asked for, so it doesn't depend on what this test setup can parse
+	 */
+	static boolean doesSomething(String nbt) throws Exception {
+		NbtCompound item = StringNbtReader.readCompound(nbt);
+		if (!"infinite_craft:custom_crafted_item".equals(item.getString("id").orElse(""))) return true;
+		NbtCompound components = item.getCompound("components").orElse(new NbtCompound());
+		return components.getKeys().stream().anyMatch(FUNCTIONAL::contains);
+	}
+
+	/**
+	 * Whether Minecraft parses the whole item, with nothing dropped. Block tags (like #minecraft:mineable/axe) are
+	 * only bound once a world loads its data packs, so an unbound-tag error is a gap in this setup, not a bad item
+	 */
+	static boolean parsesCleanly(String nbt) throws Exception {
+		try {
+			return ItemStack.CODEC.parse(registries.getOps(NbtOps.INSTANCE), StringNbtReader.readCompound(nbt)).result().isPresent();
+		} catch (IllegalStateException e) {
+			if (e.getMessage() != null && e.getMessage().startsWith("Tags not bound")) return true;
+			throw e;
+		}
+	}
+
+	@Test
+	void powerExamplesParseAndDoSomething() throws Exception {
+		for (String example : AiPrompt.POWER_EXAMPLES) {
+			String nbt = example.strip();
+			if (!parsesCleanly(nbt)) {
+				throw new AssertionError("prompt example does not parse on this version: " + nbt + "\n"
+					+ ItemStack.CODEC.parse(registries.getOps(NbtOps.INSTANCE), StringNbtReader.readCompound(nbt)).error().orElseThrow().message());
+			}
+			if (!doesSomething(nbt)) {
+				throw new AssertionError("inert example: " + nbt);
+			}
+		}
 	}
 
 	@Test
@@ -90,7 +159,7 @@ public class ClaudeCraftEval {
 		assumeTrue(apiKey != null && !apiKey.isEmpty(), "ANTHROPIC_API_KEY not set, skipping the Claude eval");
 
 		StringBuilder report = new StringBuilder("# Claude craft eval\n\n");
-		StringBuilder summary = new StringBuilder("| Model | Clean | Usable | Failed | Avg time | Cost | Cost per craft |\n|---|---|---|---|---|---|---|\n");
+		StringBuilder summary = new StringBuilder("| Model | Clean | Usable | Inert | Failed | Avg time | Cost | Cost per craft |\n|---|---|---|---|---|---|---|---|\n");
 
 		for (String model : System.getProperty("claudeEval.models", "claude-opus-5-5").split(",")) {
 			InfiniteCraftConfig config = new InfiniteCraftConfig();
@@ -108,11 +177,12 @@ public class ClaudeCraftEval {
 
 			long clean = results.stream().filter(r -> r.verdict.equals("clean")).count();
 			long usable = results.stream().filter(r -> r.verdict.equals("usable")).count();
-			long failed = results.size() - clean - usable;
+			long inert = results.stream().filter(r -> r.verdict.equals("inert")).count();
+			long failed = results.size() - clean - usable - inert;
 			double avgSeconds = results.stream().mapToLong(Result::millis).average().orElse(0) / 1000;
 			double cost = InfiniteCraft.claude.getSessionCost();
-			summary.append("| %s | %d | %d | %d | %.1fs | $%.4f | $%.4f |\n".formatted(
-				model, clean, usable, failed, avgSeconds, cost, cost / results.size()));
+			summary.append("| %s | %d | %d | %d | %d | %.1fs | $%.4f | $%.4f |\n".formatted(
+				model, clean, usable, inert, failed, avgSeconds, cost, cost / results.size()));
 
 			report.append("## ").append(model).append("\n\n| Recipe | Verdict | Time | Result |\n|---|---|---|---|\n");
 			for (Result r : results) {
@@ -123,7 +193,8 @@ public class ClaudeCraftEval {
 		}
 
 		String full = report.insert(report.indexOf("\n\n") + 2, summary + "\n" +
-			"*clean*: Minecraft parsed the whole result. *usable*: the item works but some components were dropped. *failed*: no item.\n\n").toString();
+			"*clean*: Minecraft parsed the whole result. *usable*: the item works but some components were dropped. " +
+			"*inert*: a custom item that does nothing (only a name and a model). *failed*: no item.\n\n").toString();
 		Path out = Path.of("build", "claude-eval", "report.md");
 		Files.createDirectories(out.getParent());
 		Files.writeString(out, full);
@@ -152,10 +223,20 @@ public class ClaudeCraftEval {
 			}
 
 			String nbt = response.get("itemNbt").getAsString();
-			boolean clean = ItemStack.CODEC.parse(registries.getOps(NbtOps.INSTANCE), StringNbtReader.readCompound(nbt)).result().isPresent();
-			ItemStack stack = InfiniteCraftProcess.parseItemStackFromNbt(nbt, registries);
+			boolean clean = parsesCleanly(nbt);
+			ItemStack stack;
+			try {
+				stack = InfiniteCraftProcess.parseItemStackFromNbt(nbt, registries);
+			} catch (IllegalStateException e) {
+				// unbound block tags, see parsesCleanly; the item itself is fine
+				if (e.getMessage() == null || !e.getMessage().startsWith("Tags not bound")) throw e;
+				stack = new ItemStack(InfiniteItem.CUSTOM_CRAFTED_ITEM);
+			}
 			if (stack.isEmpty()) {
 				return new Result(recipe.name, "failed", nbt, millis);
+			}
+			if (!doesSomething(nbt)) {
+				return new Result(recipe.name, "inert", nbt, millis);
 			}
 			return new Result(recipe.name, clean ? "clean" : "usable", nbt, millis);
 		} catch (Exception e) {

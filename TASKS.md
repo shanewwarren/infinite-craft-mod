@@ -1,0 +1,28 @@
+# Tasks
+
+Goal: crafting should feel like the "unlimited crafting" videos ([example](https://www.youtube.com/watch?v=TDes5gFBls0)), where every crafted item *does* something that matches its name: energy drinks, jetpacks, lightsabers, ray guns, mega punchers, god armor.
+
+How we judge progress: `ClaudeCraftEval` (see README) plus, for anything our own code does, an in-game test that uses the item and checks something happened. Playtesting with the actual player beats both.
+
+## Part 1: teach Claude the power toolkit (prompt only)
+
+- [x] **T1. Power toolkit prompt.** *(built; waiting on an eval run)* Catalog the 1.21.10 components that give items real behavior (consumable effects, attribute modifiers, equippable, glider, tool, weapon, cooldowns) and the vanilla base items that bring behavior for free (crossbow for guns, mace for punchers, elytra for flight). Rule: every result must do something that matches its name. Every example in the prompt must parse against 1.21.10.
+- [x] **T2. "Does something" check + video wishes in the eval.** *(built; waiting on an eval run)* Flag custom items that are only a name and a model as *inert*. Add the video's items as wish recipes (an ingredient renamed in an anvil, e.g. a stick named "Ray Gun"). Target: no inert results on Opus or Haiku.
+
+## Part 2: abilities in mod code (what vanilla can't do)
+
+Claude picks and tunes abilities through the structured-output schema; the mod stores them on the item and runs them on use.
+
+- [ ] **T3. In-game use test.** Fabric game test that spawns a test player, uses each crafted item and checks for an effect (moved, target damaged, effect applied). Needed before T4, since from here on the behavior is our code, not Minecraft's.
+- [ ] **T4. Ability framework + Shoot.** Beam or projectile with color, damage, rapid fire. Covers ray gun, nail gun, chain gun.
+- [ ] **T5. Thrust.** Real jetpack flight while holding use.
+- [ ] **T6. Launch / dash.** Mega puncher, dash boots.
+- [ ] **T7. Blast.** Explosion or lightning.
+- [ ] **T8. Aura.** Ongoing effects and particles from worn or held items (god armor glow).
+- [ ] **T9. Vehicles (stretch).** Rideable things like the tank need a new entity and model; scope separately.
+
+## Other ideas
+
+- [ ] **T10. Recipe memory.** Same ingredients give the same result per world; repeats are instant and free.
+- [ ] **T11. First-discovery fanfare.** Sound, particles and a "First discovery!" message for new results.
+- [ ] **Playtest.** Watch a 30-minute session, then read `logs/latest.log` (crafts, repeats, what got kept).

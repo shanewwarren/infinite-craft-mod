@@ -1,6 +1,7 @@
 package com.infinite_craft.ai;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 import com.google.gson.JsonObject;
@@ -173,7 +174,59 @@ public class AiPrompt {
 			But if the crafting REALLY can't have a logical result, set success to false and set itemNbt to `{}`,
 			\tBUT THIS REALLY SHOWS YOU HAVE NO CREATIVITY AS AN AI AND THIS MAY LEAD TO WORLD WAR III IRL!SO DON'T DO THIS!
 			LASTLY, TO CRAFT A REGULAR ITEM, IGNORE THE ELEMENT FIELD, IGNORE THE ELEMENT FIELD, IGNORE THE ELEMENT FIELD!
-			""".formatted(gameVersion, gameVersion, gameVersion, gameVersion, Registries.ITEM.getId(InfiniteItem.CUSTOM_CRAFTED_ITEM).toString());
+			""".formatted(gameVersion, gameVersion, gameVersion, gameVersion, Registries.ITEM.getId(InfiniteItem.CUSTOM_CRAFTED_ITEM).toString())
+			+ getPowerToolkitTip();
+	}
+
+	/**
+	 * Full-item examples of components that give items real behavior.
+	 * Kept as data so a test can check each one parses on this Minecraft version
+	 */
+	public static final List<String> POWER_EXAMPLES = List.of(
+		// drink with effects
+		"""
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:honey_bottle","minecraft:item_name":{text:"Energy Drink",color:"aqua"},"minecraft:max_stack_size":16,"minecraft:consumable":{consume_seconds:0.8f,animation:"drink",sound:"minecraft:entity.generic.drink",on_consume_effects:[{type:"minecraft:apply_effects",effects:[{id:"minecraft:speed",duration:1200,amplifier:2},{id:"minecraft:jump_boost",duration:1200,amplifier:1}]}]}}}""",
+		// melee weapon
+		"""
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:end_rod","minecraft:item_name":{text:"Green Lightsaber",color:"green"},"minecraft:max_stack_size":1,"minecraft:enchantment_glint_override":true,"minecraft:weapon":{},"minecraft:attribute_modifiers":[{type:"minecraft:attack_damage",id:"infinite_craft:saber_damage",amount:9.0d,operation:"add_value",slot:"mainhand"},{type:"minecraft:attack_speed",id:"infinite_craft:saber_speed",amount:-2.0d,operation:"add_value",slot:"mainhand"}]}}""",
+		// knockback weapon
+		"""
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:piston","minecraft:item_name":{text:"Mega Puncher",color:"red"},"minecraft:max_stack_size":1,"minecraft:attribute_modifiers":[{type:"minecraft:attack_knockback",id:"infinite_craft:punch",amount:6.0d,operation:"add_value",slot:"mainhand"},{type:"minecraft:attack_damage",id:"infinite_craft:punch_damage",amount:3.0d,operation:"add_value",slot:"mainhand"}]}}""",
+		// gun: a vanilla crossbow already shoots, enchantments make it fast
+		"""
+		{id:"minecraft:crossbow",count:1i,components:{"minecraft:item_name":{text:"Nail Gun",color:"gray"},"minecraft:unbreakable":{},"minecraft:enchantments":{"minecraft:quick_charge":3,"minecraft:multishot":1,"minecraft:piercing":4}}}""",
+		// flying wearable
+		"""
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:elytra","minecraft:item_name":{text:"Jetpack",color:"yellow"},"minecraft:max_stack_size":1,"minecraft:equippable":{slot:"chest"},"minecraft:glider":{},"minecraft:attribute_modifiers":[{type:"minecraft:gravity",id:"infinite_craft:jetpack_float",amount:-0.04d,operation:"add_value",slot:"chest"},{type:"minecraft:safe_fall_distance",id:"infinite_craft:jetpack_landing",amount:20.0d,operation:"add_value",slot:"chest"}]}}""",
+		// armor with bonuses (modifiers replace the base item's own armor, so include armor)
+		"""
+		{id:"minecraft:golden_chestplate",count:1i,components:{"minecraft:item_name":{text:"Holy Chestplate",color:"gold"},"minecraft:unbreakable":{},"minecraft:enchantments":{"minecraft:protection":4},"minecraft:attribute_modifiers":[{type:"minecraft:armor",id:"infinite_craft:holy_armor",amount:10.0d,operation:"add_value",slot:"chest"},{type:"minecraft:max_health",id:"infinite_craft:holy_health",amount:10.0d,operation:"add_value",slot:"chest"}]}}""",
+		// tool
+		"""
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:stonecutter","minecraft:item_name":{text:"Disc Saw",color:"gray"},"minecraft:max_stack_size":1,"minecraft:tool":{rules:[{blocks:"#minecraft:mineable/axe",speed:20.0f,correct_for_drops:true}],default_mining_speed:1.0f,damage_per_block:0}}}""",
+		// gadget used several times: consumables are used up, so give a few with a cooldown
+		"""
+		{id:"infinite_craft:custom_crafted_item",count:4i,components:{"minecraft:item_model":"minecraft:ender_eye","minecraft:item_name":{text:"Blink Orb",color:"dark_purple"},"minecraft:max_stack_size":16,"minecraft:use_cooldown":{seconds:3.0f},"minecraft:consumable":{consume_seconds:0.1f,animation:"none",sound:"minecraft:entity.enderman.teleport",has_consume_particles:false,on_consume_effects:[{type:"minecraft:teleport_randomly",diameter:16.0f}]}}}"""
+	);
+
+	private static String getPowerToolkitTip(){
+		return """
+			MAKE IT DO SOMETHING:
+			\tThe player WILL try to use what you craft. Every item result must have at least one real gameplay effect that matches its name.
+			\tNEVER return an item that is only a name, a model and lore.
+			\tIf an input item has a custom name, the player renamed it to wish for that thing: make that thing, as powerful and fun as its name suggests.
+			\tPick the base item or components that make the idea work:
+			\t\tFood, drinks, potions: "minecraft:consumable" with on_consume_effects (apply_effects, teleport_randomly, clear_all_effects), optionally "minecraft:food"
+			\t\tMelee weapons: "minecraft:weapon" plus attack_damage / attack_speed / attack_knockback attribute modifiers on mainhand
+			\t\tGuns, blasters, launchers: a minecraft:crossbow or minecraft:bow base (they really shoot) with quick_charge, multishot, piercing, power, punch or flame
+			\t\tPunchers, hammers: minecraft:mace (wind_burst, density, breach) or a big attack_knockback modifier
+			\t\tArmor and wearables: a vanilla armor base or "minecraft:equippable", with armor, max_health, movement_speed, jump_strength, scale, safe_fall_distance modifiers on that slot
+			\t\tFlying: "minecraft:glider" with an equippable chest slot, or a minecraft:elytra base; low gravity helps
+			\t\tTools: "minecraft:tool" with mining rules
+			\t\tMagic gadgets: a "minecraft:consumable" effect plus "minecraft:use_cooldown"; consumables are used up, so give several (count 2-8)
+			\t\tSaving the player from death: "minecraft:death_protection" (works like a totem)
+			\tWorking examples for this version:
+			""" + String.join("\n", POWER_EXAMPLES.stream().map(e -> "\t\t" + e.strip()).toList()) + "\n";
 	}
 
 	private static String getCraftElementTip(){
