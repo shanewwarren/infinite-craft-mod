@@ -72,7 +72,8 @@ public class CraftedItemUseTest {
 	// Ticks of holding the trigger when counting shots, like a player holding right click for 5 seconds
 	private static final int TRIGGER_TICKS = 100;
 
-	@GameTest(maxTicks = 20)
+	// open sky: jetpacks fly higher than the default barrier box
+	@GameTest(maxTicks = 20, skyAccess = true)
 	public void promptExamplesDoSomething(TestContext context) {
 		List<Fixture> fixtures = new ArrayList<>();
 		for (int i = 0; i < AiPrompt.POWER_EXAMPLES.size(); i++) {
@@ -81,7 +82,7 @@ public class CraftedItemUseTest {
 		useAll(context, fixtures, "the prompt's examples", "prompt-examples.md");
 	}
 
-	@GameTest(maxTicks = 20, required = false)
+	@GameTest(maxTicks = 20, required = false, skyAccess = true)
 	public void evalItemsDoSomething(TestContext context) {
 		useAll(context, evalFixtures(), evalItems().map(Path::toString).orElse("the checked-in eval snapshot"), "eval-items.md");
 	}
@@ -132,6 +133,7 @@ public class CraftedItemUseTest {
 			checks.add(wear(context, stack, equippable.slot()));
 		}
 		if (stack.contains(DataComponentTypes.GLIDER)) checks.add(glide(context, stack));
+		if (stack.contains(Abilities.THRUST)) checks.add(fly(context, stack));
 		if (stack.contains(Abilities.SHOOT) || stack.getItem() instanceof CrossbowItem || stack.getItem() instanceof BowItem) {
 			checks.add(shoot(context, stack));
 		}
@@ -295,6 +297,17 @@ public class CraftedItemUseTest {
 		player.setOnGround(false);
 		boolean gliding = player.checkGliding();
 		return new Check("glide", gliding, gliding ? "glides when worn on " + equippable.slot().getName() : "won't glide");
+	}
+
+	// --- jetpacks: worn (or held), holding jump flies up
+
+	private static Check fly(TestContext context, ItemStack stack) {
+		PlayerEntity player = player(context);
+		EquippableComponent equippable = stack.get(DataComponentTypes.EQUIPPABLE);
+		player.equipStack(equippable != null ? equippable.slot() : EquipmentSlot.MAINHAND, stack.copy());
+		double start = player.getY();
+		double climbed = ThrustTest.holdJump(player, 40) - start;
+		return new Check("fly", climbed > 6, "climbed %.1f blocks in 2s holding jump".formatted(climbed));
 	}
 
 	// --- ranged: holding the trigger at a mob fires, with no ammo in the inventory.

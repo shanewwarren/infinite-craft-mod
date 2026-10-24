@@ -48,6 +48,10 @@ checks the golem got hurt and saves screenshots to `build/run/clientGameTest/scr
 `{kind:"beam"|"bullet", damage:6.0f, interval:10, count:1, spread:0.0f, color:"green", fire:false, sound:"minecraft:..."}`.
 `interval` is ticks between shots (4 is the fastest), `count` is shots per pull (shotguns). Respects `minecraft:use_cooldown`.
 
+`infinite_craft:thrust` makes a worn (or held) item a jetpack: hold jump to fly up, hold forward to zoom ahead.
+`{power:1.0f, speed:1.5f}`; power 1 climbs about 7 blocks a second. Works on servers without `allow-flight`
+(the floating kick is skipped while it fires). `equippable` `asset_id:"infinite_craft:jetpack"` shows tanks on the player's back.
+
 ### Item art
 
 The mod ships its own item models (ray gun, blaster, minigun, lightsaber, jetpack, energy drink and more) that Claude can pick with

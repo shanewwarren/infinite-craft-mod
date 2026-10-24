@@ -99,7 +99,7 @@ public class ClaudeCraftEval {
 		"minecraft:attribute_modifiers", "minecraft:consumable", "minecraft:food", "minecraft:equippable",
 		"minecraft:glider", "minecraft:tool", "minecraft:weapon", "minecraft:enchantments", "minecraft:death_protection",
 		"minecraft:blocks_attacks", "minecraft:damage_resistant", "minecraft:charged_projectiles",
-		"infinite_craft:shoot"
+		"infinite_craft:shoot", "infinite_craft:thrust"
 	);
 
 	// The video's guns: each should shoot with no ammo, and feel different from the others

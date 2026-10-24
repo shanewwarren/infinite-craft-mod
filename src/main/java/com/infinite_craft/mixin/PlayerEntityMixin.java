@@ -10,6 +10,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import com.infinite_craft.ability.ThrustAbility;
 import com.infinite_craft.element.DiscoveringPlayerData;
 import com.infinite_craft.element.PlayerEntityExt;
 
@@ -21,6 +22,11 @@ public abstract class PlayerEntityMixin implements PlayerEntityExt {
     @Inject(method = "<init>", at = @At("TAIL"))
     public void init(CallbackInfo ci) {
         this.infiniteCraft$discoveringData = new DiscoveringPlayerData();
+    }
+
+    @Inject(method = "tick", at = @At("TAIL"))
+    private void infiniteCraft$tickAbilities(CallbackInfo ci) {
+        ThrustAbility.tick((PlayerEntity) (Object) this);
     }
 
     @Inject(method = "writeCustomData", at = @At("HEAD"))

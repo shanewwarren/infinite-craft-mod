@@ -205,7 +205,7 @@ public class AiPrompt {
 		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:minigun","minecraft:item_name":{text:"Minigun",color:"gray"},"minecraft:max_stack_size":1,"infinite_craft:shoot":{kind:"bullet",damage:3.0f,color:"gold",interval:4,spread:3.0f}}}""",
 		// flying wearable
 		"""
-		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:jetpack","minecraft:item_name":{text:"Jetpack",color:"yellow"},"minecraft:max_stack_size":1,"minecraft:equippable":{slot:"chest"},"minecraft:glider":{},"minecraft:attribute_modifiers":[{type:"minecraft:gravity",id:"infinite_craft:jetpack_float",amount:-0.04d,operation:"add_value",slot:"chest"},{type:"minecraft:safe_fall_distance",id:"infinite_craft:jetpack_landing",amount:20.0d,operation:"add_value",slot:"chest"}]}}""",
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:jetpack","minecraft:item_name":{text:"Jetpack",color:"yellow"},"minecraft:max_stack_size":1,"minecraft:equippable":{slot:"chest",asset_id:"infinite_craft:jetpack"},"infinite_craft:thrust":{power:1.0f,speed:1.5f},"minecraft:attribute_modifiers":[{type:"minecraft:safe_fall_distance",id:"infinite_craft:jetpack_landing",amount:20.0d,operation:"add_value",slot:"chest"}]}}""",
 		// armor with bonuses (modifiers replace the base item's own armor, so include armor)
 		"""
 		{id:"minecraft:golden_chestplate",count:1i,components:{"minecraft:item_name":{text:"Holy Chestplate",color:"gold"},"minecraft:unbreakable":{},"minecraft:enchantments":{"minecraft:protection":4},"minecraft:attribute_modifiers":[{type:"minecraft:armor",id:"infinite_craft:holy_armor",amount:10.0d,operation:"add_value",slot:"chest"},{type:"minecraft:max_health",id:"infinite_craft:holy_health",amount:10.0d,operation:"add_value",slot:"chest"}]}}""",
@@ -256,7 +256,10 @@ public class AiPrompt {
 			\t\tPunchers, hammers: minecraft:mace (wind_burst, density, breach) or a big attack_knockback modifier
 			\t\tArmor and wearables: a vanilla armor base or "minecraft:equippable", with armor, max_health, movement_speed, jump_strength, scale, safe_fall_distance modifiers on that slot.
 			\t\t\tAttribute modifiers REPLACE the base armor's own stats, so give at least the base item's armor and toughness (e.g. iron chestplate 6 armor, diamond chestplate 8 armor + 2 toughness) plus the extras.
-			\t\tFlying: "minecraft:glider" with an equippable chest slot, or a minecraft:elytra base; low gravity helps
+			\t\tFlying under power (jetpacks, rocket boots, flying armor): "infinite_craft:thrust", this mod's component, on an item with "minecraft:equippable".
+			\t\t\tWhile it is worn, holding jump flies up and holding forward zooms ahead. Fields: power (lift, 1 climbs about 7 blocks a second), speed (forward boost, 0 to 3).
+			\t\t\tAdd a safe_fall_distance modifier so landing doesn't hurt. For a jetpack worn on the back, give equippable asset_id:"infinite_craft:jetpack" so players see it.
+			\t\tGliding (wings, hang gliders): "minecraft:glider" with an equippable chest slot, or a minecraft:elytra base. Don't put glider and thrust on the same item.
 			\t\tTools: "minecraft:tool" with mining rules
 			\t\tMagic gadgets: a "minecraft:consumable" effect plus "minecraft:use_cooldown"; consumables are used up, so give several (count 2-8)
 			\t\tSaving the player from death: "minecraft:death_protection" (works like a totem, but ONLY while held in a hand, never on armor)
