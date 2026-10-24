@@ -2,16 +2,22 @@ package com.infinite_craft.mixin;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.infinite_craft.ability.Abilities;
+import com.infinite_craft.ability.LaunchAbility;
+import com.infinite_craft.ability.LaunchComponent;
 import com.infinite_craft.ability.ShootAbility;
 import com.infinite_craft.ability.ShootComponent;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.world.World;
@@ -32,5 +38,14 @@ public abstract class ItemStackMixin {
 			return ShootAbility.use(world, user, hand, stack, shoot);
 		}
 		return original.call(item, world, user, hand);
+	}
+
+	// after a melee hit lands, on the server
+	@Inject(method = "postHit", at = @At("HEAD"))
+	private void infiniteCraft$launchOnHit(LivingEntity target, LivingEntity user, CallbackInfoReturnable<Boolean> cir) {
+		LaunchComponent launch = ((ItemStack) (Object) this).get(Abilities.LAUNCH);
+		if (launch != null && target.getEntityWorld() instanceof ServerWorld world) {
+			LaunchAbility.onHit(world, target, user, launch);
+		}
 	}
 }

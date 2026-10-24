@@ -194,9 +194,9 @@ public class AiPrompt {
 		// melee weapon
 		"""
 		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:lightsaber","minecraft:custom_model_data":{colors:[3407667]},"minecraft:item_name":{text:"Green Lightsaber",color:"green"},"minecraft:max_stack_size":1,"minecraft:enchantment_glint_override":true,"minecraft:weapon":{},"minecraft:attribute_modifiers":[{type:"minecraft:attack_damage",id:"infinite_craft:saber_damage",amount:9.0d,operation:"add_value",slot:"mainhand"},{type:"minecraft:attack_speed",id:"infinite_craft:saber_speed",amount:-2.0d,operation:"add_value",slot:"mainhand"}]}}""",
-		// knockback weapon
+		// launching weapon: a punch sends mobs flying
 		"""
-		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:power_fist","minecraft:item_name":{text:"Mega Puncher",color:"red"},"minecraft:max_stack_size":1,"minecraft:attribute_modifiers":[{type:"minecraft:attack_knockback",id:"infinite_craft:punch",amount:6.0d,operation:"add_value",slot:"mainhand"},{type:"minecraft:attack_damage",id:"infinite_craft:punch_damage",amount:3.0d,operation:"add_value",slot:"mainhand"}]}}""",
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:power_fist","minecraft:item_name":{text:"Mega Puncher",color:"red"},"minecraft:max_stack_size":1,"infinite_craft:launch":{power:2.0f,up:0.8f},"minecraft:attribute_modifiers":[{type:"minecraft:attack_damage",id:"infinite_craft:punch_damage",amount:3.0d,operation:"add_value",slot:"mainhand"}]}}""",
 		// beam gun: infinite_craft:shoot fires with no ammo
 		"""
 		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:laser_blaster","minecraft:item_name":{text:"Laser Blaster",color:"red"},"minecraft:max_stack_size":1,"infinite_craft:shoot":{kind:"beam",damage:6.0f,color:"red",interval:10}}}""",
@@ -212,6 +212,9 @@ public class AiPrompt {
 		// flying wearable
 		"""
 		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:jetpack","minecraft:item_name":{text:"Jetpack",color:"yellow"},"minecraft:max_stack_size":1,"minecraft:equippable":{slot:"chest",asset_id:"infinite_craft:jetpack"},"infinite_craft:thrust":{power:1.0f,speed:1.5f},"minecraft:attribute_modifiers":[{type:"minecraft:safe_fall_distance",id:"infinite_craft:jetpack_landing",amount:20.0d,operation:"add_value",slot:"chest"}]}}""",
+		// boots that dash in mid-air
+		"""
+		{id:"minecraft:leather_boots",count:1i,components:{"minecraft:item_name":{text:"Dash Boots",color:"aqua"},"minecraft:dyed_color":3394815,"infinite_craft:dash":{power:1.5f,charges:2},"minecraft:attribute_modifiers":[{type:"minecraft:armor",id:"infinite_craft:dash_armor",amount:1.0d,operation:"add_value",slot:"feet"},{type:"minecraft:movement_speed",id:"infinite_craft:dash_speed",amount:0.2d,operation:"add_multiplied_base",slot:"feet"},{type:"minecraft:safe_fall_distance",id:"infinite_craft:dash_landing",amount:6.0d,operation:"add_value",slot:"feet"}]}}""",
 		// armor with bonuses (modifiers replace the base item's own armor, so include armor)
 		"""
 		{id:"minecraft:golden_chestplate",count:1i,components:{"minecraft:item_name":{text:"Holy Chestplate",color:"gold"},"minecraft:unbreakable":{},"minecraft:enchantments":{"minecraft:protection":4},"minecraft:attribute_modifiers":[{type:"minecraft:armor",id:"infinite_craft:holy_armor",amount:10.0d,operation:"add_value",slot:"chest"},{type:"minecraft:max_health",id:"infinite_craft:holy_health",amount:10.0d,operation:"add_value",slot:"chest"}]}}""",
@@ -263,9 +266,14 @@ public class AiPrompt {
 			\t\t\tsound plays on EVERY shot, so leave it out (beams zap, bullets click) or pick a short one like "minecraft:entity.blaze.shoot"; never explosions or long sounds like beacon or music.
 			\t\t\tMake different guns feel different: a chain gun fires every 4 ticks with some spread, a ray gun is a colored beam, a shotgun fires several bullets with wide spread, a sniper is slow and hits hard.
 			\t\t\tGive it a fitting "minecraft:item_model" on infinite_craft:custom_crafted_item. A vanilla bow or crossbow alone needs arrows the player may not have, so add "infinite_craft:shoot" to those too.
-			\t\tPunchers, hammers: minecraft:mace (wind_burst, density, breach) or a big attack_knockback modifier. A magic hammer can also shoot, like Thor's hammer calling lightning.
+			\t\tPunchers, hammers, anything that should send mobs flying: "infinite_craft:launch", this mod's component. A melee hit flings the mob away in a big arc with a trail.
+			\t\t\tFields: power (how far: 1 is about 10 blocks, 2 about 20, 3 about 30), up (how high it arcs: 0 skims the ground, 1 is a high arc, 2 is nearly straight up).
+			\t\t\tIt works on any base item and even on mobs that shrug off knockback; add attack_damage for the hit itself. Prefer it to attack_knockback, which only shoves mobs along the ground.
+			\t\t\tminecraft:mace (wind_burst, density, breach) suits a smashing hammer. A magic hammer can also shoot, like Thor's hammer calling lightning.
 			\t\tArmor and wearables: a vanilla armor base or "minecraft:equippable", with armor, max_health, movement_speed, jump_strength, scale, safe_fall_distance modifiers on that slot.
 			\t\t\tAttribute modifiers REPLACE the base armor's own stats, so give at least the base item's armor and toughness (e.g. iron chestplate 6 armor, diamond chestplate 8 armor + 2 toughness) plus the extras.
+			\t\tDashing (dash boots, speed boots, ninja gear, double-jump shoes): "infinite_craft:dash", this mod's component, on a worn item. Pressing jump again in mid-air dashes the way the player faces.
+			\t\t\tFields: power (how far: 1 is about 8 blocks, 3 about 20), charges (dashes before landing again: 2 is a double dash). Pair it with movement_speed or a safe_fall_distance modifier.
 			\t\tFlying under power (jetpacks, rocket boots, flying armor): "infinite_craft:thrust", this mod's component, on an item with "minecraft:equippable".
 			\t\t\tWhile it is worn, holding jump flies up and holding forward zooms ahead. Fields: power (lift, 1 climbs about 7 blocks a second), speed (forward boost, 0 to 3).
 			\t\t\tAdd a safe_fall_distance modifier so landing doesn't hurt. For a jetpack worn on the back, give equippable asset_id:"infinite_craft:jetpack" so players see it.

@@ -40,10 +40,14 @@ gliders must glide, guns must fire with no ammo in the inventory, tools must min
 allowed to fail; a failure there means the prompt needs work). `ShootTest` fires the guns over real ticks at a mob.
 `BlastTest` fires explosive and lightning shots at a wall of glass, planks, wool and torches: the mobs beside it must get hurt,
 while every block, the shooter's pet wolf, an armor stand and a dropped item must come through untouched, with no fire.
+`LaunchTest` and `DashTest` run on a 48-block runway (`data/infinite-craft-test/gametest/structure/runway.snbt`), since the default
+test area is walled in by barriers at 8 blocks, which would cap any flight or dash at about 3 blocks.
 
 `./gradlew runClientGameTest` opens a real game window, holds right click with a Ray Gun and a Chain Gun at an iron golem,
 checks the golem got hurt and saves screenshots to `build/run/clientGameTest/screenshots`. It also fires a rocket and a lightning wand
-at a golem, and a rocket point-blank into a glass wall, which must leave the player and the wall unharmed.
+at a golem, and a rocket point-blank into a glass wall, which must leave the player and the wall unharmed. It punches an iron golem
+with a Mega Puncher, dashes in singleplayer, and triple-dashes on a dedicated server without `allow-flight`, where the server must agree
+with the client on where the player ended up.
 
 ### Mod abilities Claude can give items
 
@@ -53,6 +57,12 @@ at a golem, and a rocket point-blank into a glass wall, which must leave the pla
 `kind:"rocket"` fires a slower firework-like rocket that always explodes. `explode:2.0f` (power 0 to 4) blows up where any shot lands,
 `lightning:true` calls lightning there. Blasts hurt mobs only: they never break blocks, start fires, charge creepers or hurt the shooter,
 their pets, armor stands or dropped items.
+
+`infinite_craft:launch` makes a melee hit fling the mob away in an arc with a cloud trail, even mobs that resist knockback:
+`{power:2.0f, up:0.8f}`; power 1 lands a pig about 10 blocks away, 3 about 30; up 0 skims the ground, 2 goes nearly straight up.
+
+`infinite_craft:dash` makes a worn (or held) item dash: press jump again in mid-air to dash the way you face.
+`{power:1.0f, charges:1}`; power 1 goes about 8 blocks, `charges` is dashes before landing again. Works on servers without `allow-flight`.
 
 `infinite_craft:thrust` makes a worn (or held) item a jetpack: hold jump to fly up, hold forward to zoom ahead.
 `{power:1.0f, speed:1.5f}`; power 1 climbs about 7 blocks a second. Works on servers without `allow-flight`

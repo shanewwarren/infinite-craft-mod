@@ -134,6 +134,7 @@ public class CraftedItemUseTest {
 		}
 		if (stack.contains(DataComponentTypes.GLIDER)) checks.add(glide(context, stack));
 		if (stack.contains(Abilities.THRUST)) checks.add(fly(context, stack));
+		if (stack.contains(Abilities.DASH)) checks.add(dash(context, stack));
 		if (stack.contains(Abilities.SHOOT) || stack.getItem() instanceof CrossbowItem || stack.getItem() instanceof BowItem) {
 			checks.add(shoot(context, stack));
 		}
@@ -198,7 +199,7 @@ public class CraftedItemUseTest {
 	// --- melee: hits harder or launches further than a bare fist
 
 	private static boolean isMelee(ItemStack stack) {
-		if (stack.contains(DataComponentTypes.WEAPON)) return true;
+		if (stack.contains(DataComponentTypes.WEAPON) || stack.contains(Abilities.LAUNCH)) return true;
 		boolean[] attacks = {false};
 		stack.applyAttributeModifiers(EquipmentSlot.MAINHAND, (attribute, modifier) -> {
 			if (attribute.equals(EntityAttributes.ATTACK_DAMAGE) || attribute.equals(EntityAttributes.ATTACK_KNOCKBACK)) attacks[0] = true;
@@ -211,7 +212,8 @@ public class CraftedItemUseTest {
 		double knockbackModifier = modifierTotal(stack, EquipmentSlot.MAINHAND, EntityAttributes.ATTACK_KNOCKBACK);
 		boolean harder = hit.damage > fist.damage + 0.01;
 		boolean launches = hit.knockback > fist.knockback + 0.01;
-		boolean passed = (harder || launches) && (knockbackModifier <= 0 || launches);
+		// knockback or launch must actually send the mob off faster than a fist
+		boolean passed = (harder || launches) && (knockbackModifier <= 0 && !stack.contains(Abilities.LAUNCH) || launches);
 		return new Check("melee", passed, "%.1f damage, %.2f knockback%s".formatted(hit.damage, hit.knockback, hit.onFire ? ", set on fire" : ""));
 	}
 
@@ -313,6 +315,23 @@ public class CraftedItemUseTest {
 		double start = player.getY();
 		double climbed = ThrustTest.holdJump(player, 40) - start;
 		return new Check("fly", climbed > 6, "climbed %.1f blocks in 2s holding jump".formatted(climbed));
+	}
+
+	// --- dash: jumping again in mid-air dashes ahead. The test area's walls stop a dash after about 3 blocks (DashTest uses a runway)
+
+	private static Check dash(TestContext context, ItemStack stack) {
+		PlayerEntity player = player(context);
+		EquippableComponent equippable = stack.get(DataComponentTypes.EQUIPPABLE);
+		player.equipStack(equippable != null ? equippable.slot() : EquipmentSlot.MAINHAND, stack.copy());
+		// land on the floor first: a new player starts out in the air
+		for (int t = 0; t < 5; t++) tick(player);
+		Vec3d start = player.getEntityPos();
+		for (int t = 0; t < 30; t++) {
+			player.setJumping(t < 2 || t == 5);
+			tick(player);
+		}
+		double across = player.getEntityPos().subtract(start).horizontalLength();
+		return new Check("dash", across > 2.5, "dashed %.1f blocks jumping in mid-air".formatted(across));
 	}
 
 	// --- ranged: holding the trigger at a mob fires, with no ammo in the inventory.
