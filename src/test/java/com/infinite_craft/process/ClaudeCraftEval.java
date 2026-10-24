@@ -128,6 +128,14 @@ public class ClaudeCraftEval {
 	}
 
 	@Test
+	void shootTakesEverydayColorNames() throws Exception {
+		for (String color : List.of("\"orange\"", "\"purple\"", "\"gold\"", "\"#33FF66\"", "16711680")) {
+			String nbt = "{id:\"minecraft:bow\",count:1i,components:{\"infinite_craft:shoot\":{kind:\"bullet\",color:" + color + "}}}";
+			if (!parsesCleanly(nbt)) throw new AssertionError("shoot color " + color + " doesn't parse");
+		}
+	}
+
+	@Test
 	void everyCraftedModelHasItsFiles() {
 		for (AiPrompt.CraftedModel model : AiPrompt.craftedModels()) {
 			String name = Identifier.of(model.model()).getPath();

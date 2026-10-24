@@ -1,10 +1,13 @@
 package com.infinite_craft.ability;
 
+import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.minecraft.component.ComponentsAccess;
@@ -44,8 +47,22 @@ public record ShootComponent(Kind kind, float damage, int color, int interval, i
 		spread = MathHelper.clamp(spread, 0, 45);
 	}
 
-	private static final Codec<Integer> COLOR_CODEC = Codec.either(Codec.INT, TextColor.CODEC)
-		.xmap(either -> either.map(rgb -> rgb, TextColor::getRgb), Either::left);
+	// Minecraft's text colors only have 16 names; Claude also writes everyday ones like "orange"
+	private static final Map<String, Integer> MORE_COLOR_NAMES = Map.ofEntries(
+		Map.entry("orange", 0xFF8800), Map.entry("purple", 0x9933FF), Map.entry("violet", 0x8800FF), Map.entry("pink", 0xFF66CC),
+		Map.entry("magenta", 0xFF00FF), Map.entry("cyan", 0x00FFFF), Map.entry("teal", 0x008080), Map.entry("lime", 0x66FF33),
+		Map.entry("brown", 0x8B5A2B), Map.entry("silver", 0xC0C0C0), Map.entry("crimson", 0xDC143C)
+	);
+
+	private static final Codec<Integer> COLOR_NAME_CODEC = Codec.STRING.comapFlatMap(
+		name -> TextColor.parse(name).result().map(TextColor::getRgb)
+			.or(() -> Optional.ofNullable(MORE_COLOR_NAMES.get(name.toLowerCase(Locale.ROOT))))
+			.map(DataResult::success)
+			.orElseGet(() -> DataResult.error(() -> "Unknown color " + name, 0xFF3030)),
+		rgb -> "#%06X".formatted(rgb));
+
+	private static final Codec<Integer> COLOR_CODEC = Codec.either(Codec.INT, COLOR_NAME_CODEC)
+		.xmap(either -> either.map(rgb -> rgb, rgb -> rgb), Either::left);
 
 	public static final Codec<ShootComponent> CODEC = RecordCodecBuilder.create(instance -> instance.group(
 		Kind.CODEC.optionalFieldOf("kind", Kind.BEAM).forGetter(ShootComponent::kind),
