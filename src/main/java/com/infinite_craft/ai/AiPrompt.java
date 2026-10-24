@@ -194,7 +194,7 @@ public class AiPrompt {
 		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:piston","minecraft:item_name":{text:"Mega Puncher",color:"red"},"minecraft:max_stack_size":1,"minecraft:attribute_modifiers":[{type:"minecraft:attack_knockback",id:"infinite_craft:punch",amount:6.0d,operation:"add_value",slot:"mainhand"},{type:"minecraft:attack_damage",id:"infinite_craft:punch_damage",amount:3.0d,operation:"add_value",slot:"mainhand"}]}}""",
 		// gun: a vanilla crossbow already shoots, enchantments make it fast
 		"""
-		{id:"minecraft:crossbow",count:1i,components:{"minecraft:item_name":{text:"Nail Gun",color:"gray"},"minecraft:unbreakable":{},"minecraft:enchantments":{"minecraft:quick_charge":3,"minecraft:multishot":1,"minecraft:piercing":4}}}""",
+		{id:"minecraft:crossbow",count:1i,components:{"minecraft:item_name":{text:"Nail Gun",color:"gray"},"minecraft:unbreakable":{},"minecraft:enchantments":{"minecraft:quick_charge":3,"minecraft:multishot":1,"minecraft:piercing":4},"minecraft:charged_projectiles":[{id:"minecraft:arrow",count:1}]}}""",
 		// flying wearable
 		"""
 		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:elytra","minecraft:item_name":{text:"Jetpack",color:"yellow"},"minecraft:max_stack_size":1,"minecraft:equippable":{slot:"chest"},"minecraft:glider":{},"minecraft:attribute_modifiers":[{type:"minecraft:gravity",id:"infinite_craft:jetpack_float",amount:-0.04d,operation:"add_value",slot:"chest"},{type:"minecraft:safe_fall_distance",id:"infinite_craft:jetpack_landing",amount:20.0d,operation:"add_value",slot:"chest"}]}}""",
@@ -214,17 +214,21 @@ public class AiPrompt {
 			MAKE IT DO SOMETHING:
 			\tThe player WILL try to use what you craft. Every item result must have at least one real gameplay effect that matches its name.
 			\tNEVER return an item that is only a name, a model and lore.
+			\tThis is about new or modified items: breaking one item down into its materials, or a VANILLAIFY result, should stay plain vanilla items.
 			\tIf an input item has a custom name, the player renamed it to wish for that thing: make that thing, as powerful and fun as its name suggests.
 			\tPick the base item or components that make the idea work:
 			\t\tFood, drinks, potions: "minecraft:consumable" with on_consume_effects (apply_effects, teleport_randomly, clear_all_effects), optionally "minecraft:food"
 			\t\tMelee weapons: "minecraft:weapon" plus attack_damage / attack_speed / attack_knockback attribute modifiers on mainhand
-			\t\tGuns, blasters, launchers: a minecraft:crossbow or minecraft:bow base (they really shoot) with quick_charge, multishot, piercing, power, punch or flame
+			\t\tGuns, blasters, launchers: a minecraft:crossbow or minecraft:bow base (they really shoot) with quick_charge, multishot, piercing, power, punch or flame.
+			\t\t\tThey need arrows to fire, so preload a crossbow with "minecraft:charged_projectiles" (arrows, or a colored firework_rocket for blasts) so it is ready to shoot.
+			\t\t\tMake different guns feel different: a chain gun reloads instantly (quick_charge 5), a shotgun spreads (multishot), a sniper hits hard (bow with high power).
 			\t\tPunchers, hammers: minecraft:mace (wind_burst, density, breach) or a big attack_knockback modifier
-			\t\tArmor and wearables: a vanilla armor base or "minecraft:equippable", with armor, max_health, movement_speed, jump_strength, scale, safe_fall_distance modifiers on that slot
+			\t\tArmor and wearables: a vanilla armor base or "minecraft:equippable", with armor, max_health, movement_speed, jump_strength, scale, safe_fall_distance modifiers on that slot.
+			\t\t\tAttribute modifiers REPLACE the base armor's own stats, so give at least the base item's armor and toughness (e.g. iron chestplate 6 armor, diamond chestplate 8 armor + 2 toughness) plus the extras.
 			\t\tFlying: "minecraft:glider" with an equippable chest slot, or a minecraft:elytra base; low gravity helps
 			\t\tTools: "minecraft:tool" with mining rules
 			\t\tMagic gadgets: a "minecraft:consumable" effect plus "minecraft:use_cooldown"; consumables are used up, so give several (count 2-8)
-			\t\tSaving the player from death: "minecraft:death_protection" (works like a totem)
+			\t\tSaving the player from death: "minecraft:death_protection" (works like a totem, but ONLY while held in a hand, never on armor)
 			\tWorking examples for this version:
 			""" + String.join("\n", POWER_EXAMPLES.stream().map(e -> "\t\t" + e.strip()).toList()) + "\n";
 	}

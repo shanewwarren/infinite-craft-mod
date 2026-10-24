@@ -6,15 +6,15 @@ How we judge progress: `ClaudeCraftEval` (see README) plus, for anything our own
 
 ## Part 1: teach Claude the power toolkit (prompt only)
 
-- [x] **T1. Power toolkit prompt.** *(built; waiting on an eval run)* Catalog the 1.21.10 components that give items real behavior (consumable effects, attribute modifiers, equippable, glider, tool, weapon, cooldowns) and the vanilla base items that bring behavior for free (crossbow for guns, mace for punchers, elytra for flight). Rule: every result must do something that matches its name. Every example in the prompt must parse against 1.21.10.
-- [x] **T2. "Does something" check + video wishes in the eval.** *(built; waiting on an eval run)* Flag custom items that are only a name and a model as *inert*. Add the video's items as wish recipes (an ingredient renamed in an anvil, e.g. a stick named "Ray Gun"). Target: no inert results on Opus or Haiku.
+- [x] **T1. Power toolkit prompt.** *(eval 2026-10-24: 0 inert on Opus and Haiku; follow-up prompt fixes for break-down, armor strength, held-only totems and gun variety need one more eval run)* Catalog the 1.21.10 components that give items real behavior (consumable effects, attribute modifiers, equippable, glider, tool, weapon, cooldowns) and the vanilla base items that bring behavior for free (crossbow for guns, mace for punchers, elytra for flight). Rule: every result must do something that matches its name. Every example in the prompt must parse against 1.21.10.
+- [x] **T2. "Does something" check + video wishes in the eval.** Flag custom items that are only a name and a model as *inert*. Add the video's items as wish recipes (an ingredient renamed in an anvil, e.g. a stick named "Ray Gun"). Target: no inert results on Opus or Haiku.
 
 ## Part 2: abilities in mod code (what vanilla can't do)
 
 Claude picks and tunes abilities through the structured-output schema; the mod stores them on the item and runs them on use.
 
 - [ ] **T3. In-game use test.** Fabric game test that spawns a test player, uses each crafted item and checks for an effect (moved, target damaged, effect applied). Needed before T4, since from here on the behavior is our code, not Minecraft's.
-- [ ] **T4. Ability framework + Shoot.** Beam or projectile with color, damage, rapid fire. Covers ray gun, nail gun, chain gun.
+- [ ] **T4. Ability framework + Shoot.** Beam or projectile with color, damage, rapid fire, no ammo needed (vanilla crossbow guns need arrows in survival). Covers ray gun, nail gun, chain gun.
 - [ ] **T5. Thrust.** Real jetpack flight while holding use.
 - [ ] **T6. Launch / dash.** Mega puncher, dash boots.
 - [ ] **T7. Blast.** Explosion or lightning.
