@@ -261,7 +261,9 @@ public class AiPrompt {
 			\t\t\tdamage (per hit; a zombie has 20 health, a diamond sword does 7), interval (ticks between shots: 4 is the fastest, 20 is once a second),
 			\t\t\tcount (shots per pull, e.g. 5 for a shotgun), spread (aim error in degrees), color (a color name or "#RRGGBB"), fire (true sets targets on fire), optional sound.
 			\t\t\tBlasts where a shot lands: explode (explosion power 1 to 4: 2 a grenade, 3 a creeper, 4 TNT; for rocket launchers, TNT guns, grenade launchers, explosive arrows)
-			\t\t\tand lightning (true: lightning strikes there; for Thor's hammer, smite wands, storm staffs). They hurt mobs but never break blocks, start fires or hurt the shooter.
+			\t\t\tand lightning (true: lightning strikes there; for Thor's hammer, smite wands, storm staffs). Blasts hurt mobs, never the shooter, and never start fires.
+			\t\t\tdestroy (true: the explosion breaks blocks like TNT; rockets do unless destroy:false) is for weapons meant to wreck buildings: TNT guns, grenade launchers, bombs, wrecking cannons.
+			\t\t\tLeave it off for ray guns and magic that only happens to explode. Lightning never breaks blocks.
 			\t\t\tKeep blasting guns slow (interval 20 or more): a blast every shot is chaos.
 			\t\t\tsound plays on EVERY shot, so leave it out (beams zap, bullets click) or pick a short one like "minecraft:entity.blaze.shoot"; never explosions or long sounds like beacon or music.
 			\t\t\tMake different guns feel different: a chain gun fires every 4 ticks with some spread, a ray gun is a colored beam, a shotgun fires several bullets with wide spread, a sniper is slow and hits hard.
