@@ -10,7 +10,8 @@
 			"com.infinite_craft.test.ShootTest"
 		],
 		"fabric-client-gametest": [
-			"com.infinite_craft.test.ShootClientGameTest"
+			"com.infinite_craft.test.ShootClientGameTest",
+			"com.infinite_craft.test.ItemLooksClientGameTest"
 		]
 	},
 	"depends": {

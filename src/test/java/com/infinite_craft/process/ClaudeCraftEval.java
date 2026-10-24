@@ -115,6 +115,31 @@ public class ClaudeCraftEval {
 			s.contains("count") ? " ×" + s.get("count") : "", s.contains("spread") ? " spread " + s.get("spread") : "");
 	}
 
+	/** The item_model a result asks for, if any */
+	static Optional<String> itemModel(String nbt) throws Exception {
+		return StringNbtReader.readCompound(nbt).getCompound("components").flatMap(c -> c.getString("minecraft:item_model"));
+	}
+
+	/** A vanilla item's model or one of the mod's; anything else renders as the missing texture */
+	static boolean modelExists(String model) {
+		Identifier id = Identifier.tryParse(model);
+		return id != null && (Registries.ITEM.containsId(id) && !id.getNamespace().equals(InfiniteCraft.MOD_ID)
+			|| AiPrompt.craftedModels().stream().anyMatch(m -> m.model().equals(model)));
+	}
+
+	@Test
+	void everyCraftedModelHasItsFiles() {
+		for (AiPrompt.CraftedModel model : AiPrompt.craftedModels()) {
+			String name = Identifier.of(model.model()).getPath();
+			for (String file : List.of("items/" + name + ".json", "models/item/" + name + ".json",
+					"textures/item/" + name + ".png", "textures/item/" + name + "_glow.png")) {
+				if (ClaudeCraftEval.class.getResource("/assets/infinite_craft/" + file) == null) {
+					throw new AssertionError(model.model() + " is missing " + file);
+				}
+			}
+		}
+	}
+
 	/**
 	 * Vanilla items behave like themselves; a custom item only does something through the components it was given.
 	 * Reads what the result asked for, so it doesn't depend on what this test setup can parse
@@ -174,7 +199,7 @@ public class ClaudeCraftEval {
 		assumeTrue(apiKey != null && !apiKey.isEmpty(), "ANTHROPIC_API_KEY not set, skipping the Claude eval");
 
 		StringBuilder report = new StringBuilder("# Claude craft eval\n\n");
-		StringBuilder summary = new StringBuilder("| Model | Clean | Usable | Inert | Failed | Avg time | Cost | Cost per craft | Video guns |\n|---|---|---|---|---|---|---|---|---|\n");
+		StringBuilder summary = new StringBuilder("| Model | Clean | Usable | Inert | Failed | Avg time | Cost | Cost per craft | Video guns | Mod looks |\n|---|---|---|---|---|---|---|---|---|---|\n");
 		// every item result, for the game test to use in a real world (see CraftedItemUseTest)
 		StringBuilder fixtures = new StringBuilder("# Crafted items from the last Claude eval. One per line: label<TAB>item NBT\n");
 
@@ -199,7 +224,11 @@ public class ClaudeCraftEval {
 			double avgSeconds = results.stream().mapToLong(Result::millis).average().orElse(0) / 1000;
 			double cost = InfiniteCraft.claude.getSessionCost();
 			List<String> guns = new ArrayList<>();
+			List<String> looks = new ArrayList<>();
 			for (Result r : results) {
+				if (r.detail.startsWith("{")) {
+					itemModel(r.detail).filter(m -> m.startsWith("infinite_craft:")).ifPresent(m -> looks.add(r.recipe.replace("wish: ", "") + ": " + m.substring(15)));
+				}
 				if (r.detail.startsWith("{")) {
 					fixtures.append(model.replace("claude-", "")).append(": ").append(r.recipe).append('\t').append(r.detail).append('\n');
 				}
@@ -207,8 +236,9 @@ public class ClaudeCraftEval {
 					guns.add(r.recipe.replace("wish: ", "") + ": " + (r.detail.startsWith("{") ? gunSummary(r.detail) : r.verdict));
 				}
 			}
-			summary.append("| %s | %d | %d | %d | %d | %.1fs | $%.4f | $%.4f | %s |\n".formatted(
-				model, clean, usable, inert, failed, avgSeconds, cost, cost / results.size(), String.join("<br>", guns)));
+			summary.append("| %s | %d | %d | %d | %d | %.1fs | $%.4f | $%.4f | %s | %d: %s |\n".formatted(
+				model, clean, usable, inert, failed, avgSeconds, cost, cost / results.size(), String.join("<br>", guns),
+				looks.size(), String.join("<br>", looks)));
 
 			report.append("## ").append(model).append("\n\n| Recipe | Verdict | Time | Result |\n|---|---|---|---|\n");
 			for (Result r : results) {
@@ -264,6 +294,10 @@ public class ClaudeCraftEval {
 			}
 			if (!doesSomething(nbt)) {
 				return new Result(recipe.name, "inert", nbt, millis);
+			}
+			Optional<String> model = itemModel(nbt);
+			if (model.isPresent() && !modelExists(model.get())) {
+				return new Result(recipe.name, "usable", "MISSING MODEL " + model.get() + ": " + nbt, millis);
 			}
 			return new Result(recipe.name, clean ? "clean" : "usable", nbt, millis);
 		} catch (Exception e) {

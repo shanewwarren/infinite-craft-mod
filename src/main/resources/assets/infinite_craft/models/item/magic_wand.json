@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "infinite_craft:item/magic_wand",
+    "layer1": "infinite_craft:item/magic_wand_glow",
+    "layer2": "infinite_craft:item/magic_wand_core",
+    "particle": "#layer0"
+  }
+}

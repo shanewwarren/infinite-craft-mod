@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "infinite_craft:item/lightsaber",
+    "layer1": "infinite_craft:item/lightsaber_glow",
+    "layer2": "infinite_craft:item/lightsaber_core",
+    "particle": "#layer0"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "infinite_craft:item/power_fist",
+    "layer1": "infinite_craft:item/power_fist_glow",
+    "particle": "#layer0"
+  }
+}

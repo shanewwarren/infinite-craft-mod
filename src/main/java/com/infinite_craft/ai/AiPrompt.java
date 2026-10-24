@@ -1,5 +1,9 @@
 package com.infinite_craft.ai;
 
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -185,22 +189,22 @@ public class AiPrompt {
 	public static final List<String> POWER_EXAMPLES = List.of(
 		// drink with effects
 		"""
-		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:honey_bottle","minecraft:item_name":{text:"Energy Drink",color:"aqua"},"minecraft:max_stack_size":16,"minecraft:consumable":{consume_seconds:0.8f,animation:"drink",sound:"minecraft:entity.generic.drink",on_consume_effects:[{type:"minecraft:apply_effects",effects:[{id:"minecraft:speed",duration:1200,amplifier:2},{id:"minecraft:jump_boost",duration:1200,amplifier:1}]}]}}}""",
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:energy_drink","minecraft:custom_model_data":{colors:[3394815]},"minecraft:item_name":{text:"Energy Drink",color:"aqua"},"minecraft:max_stack_size":16,"minecraft:consumable":{consume_seconds:0.8f,animation:"drink",sound:"minecraft:entity.generic.drink",on_consume_effects:[{type:"minecraft:apply_effects",effects:[{id:"minecraft:speed",duration:1200,amplifier:2},{id:"minecraft:jump_boost",duration:1200,amplifier:1}]}]}}}""",
 		// melee weapon
 		"""
-		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:end_rod","minecraft:item_name":{text:"Green Lightsaber",color:"green"},"minecraft:max_stack_size":1,"minecraft:enchantment_glint_override":true,"minecraft:weapon":{},"minecraft:attribute_modifiers":[{type:"minecraft:attack_damage",id:"infinite_craft:saber_damage",amount:9.0d,operation:"add_value",slot:"mainhand"},{type:"minecraft:attack_speed",id:"infinite_craft:saber_speed",amount:-2.0d,operation:"add_value",slot:"mainhand"}]}}""",
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:lightsaber","minecraft:custom_model_data":{colors:[3407667]},"minecraft:item_name":{text:"Green Lightsaber",color:"green"},"minecraft:max_stack_size":1,"minecraft:enchantment_glint_override":true,"minecraft:weapon":{},"minecraft:attribute_modifiers":[{type:"minecraft:attack_damage",id:"infinite_craft:saber_damage",amount:9.0d,operation:"add_value",slot:"mainhand"},{type:"minecraft:attack_speed",id:"infinite_craft:saber_speed",amount:-2.0d,operation:"add_value",slot:"mainhand"}]}}""",
 		// knockback weapon
 		"""
-		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:piston","minecraft:item_name":{text:"Mega Puncher",color:"red"},"minecraft:max_stack_size":1,"minecraft:attribute_modifiers":[{type:"minecraft:attack_knockback",id:"infinite_craft:punch",amount:6.0d,operation:"add_value",slot:"mainhand"},{type:"minecraft:attack_damage",id:"infinite_craft:punch_damage",amount:3.0d,operation:"add_value",slot:"mainhand"}]}}""",
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:power_fist","minecraft:item_name":{text:"Mega Puncher",color:"red"},"minecraft:max_stack_size":1,"minecraft:attribute_modifiers":[{type:"minecraft:attack_knockback",id:"infinite_craft:punch",amount:6.0d,operation:"add_value",slot:"mainhand"},{type:"minecraft:attack_damage",id:"infinite_craft:punch_damage",amount:3.0d,operation:"add_value",slot:"mainhand"}]}}""",
 		// beam gun: infinite_craft:shoot fires with no ammo
 		"""
-		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:blaze_rod","minecraft:item_name":{text:"Laser Blaster",color:"red"},"minecraft:max_stack_size":1,"infinite_craft:shoot":{kind:"beam",damage:6.0f,color:"red",interval:10}}}""",
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:laser_blaster","minecraft:item_name":{text:"Laser Blaster",color:"red"},"minecraft:max_stack_size":1,"infinite_craft:shoot":{kind:"beam",damage:6.0f,color:"red",interval:10}}}""",
 		// rapid-fire bullet gun
 		"""
-		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:iron_horse_armor","minecraft:item_name":{text:"Minigun",color:"gray"},"minecraft:max_stack_size":1,"infinite_craft:shoot":{kind:"bullet",damage:3.0f,color:"gold",interval:4,spread:3.0f}}}""",
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:minigun","minecraft:item_name":{text:"Minigun",color:"gray"},"minecraft:max_stack_size":1,"infinite_craft:shoot":{kind:"bullet",damage:3.0f,color:"gold",interval:4,spread:3.0f}}}""",
 		// flying wearable
 		"""
-		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:elytra","minecraft:item_name":{text:"Jetpack",color:"yellow"},"minecraft:max_stack_size":1,"minecraft:equippable":{slot:"chest"},"minecraft:glider":{},"minecraft:attribute_modifiers":[{type:"minecraft:gravity",id:"infinite_craft:jetpack_float",amount:-0.04d,operation:"add_value",slot:"chest"},{type:"minecraft:safe_fall_distance",id:"infinite_craft:jetpack_landing",amount:20.0d,operation:"add_value",slot:"chest"}]}}""",
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:jetpack","minecraft:item_name":{text:"Jetpack",color:"yellow"},"minecraft:max_stack_size":1,"minecraft:equippable":{slot:"chest"},"minecraft:glider":{},"minecraft:attribute_modifiers":[{type:"minecraft:gravity",id:"infinite_craft:jetpack_float",amount:-0.04d,operation:"add_value",slot:"chest"},{type:"minecraft:safe_fall_distance",id:"infinite_craft:jetpack_landing",amount:20.0d,operation:"add_value",slot:"chest"}]}}""",
 		// armor with bonuses (modifiers replace the base item's own armor, so include armor)
 		"""
 		{id:"minecraft:golden_chestplate",count:1i,components:{"minecraft:item_name":{text:"Holy Chestplate",color:"gold"},"minecraft:unbreakable":{},"minecraft:enchantments":{"minecraft:protection":4},"minecraft:attribute_modifiers":[{type:"minecraft:armor",id:"infinite_craft:holy_armor",amount:10.0d,operation:"add_value",slot:"chest"},{type:"minecraft:max_health",id:"infinite_craft:holy_health",amount:10.0d,operation:"add_value",slot:"chest"}]}}""",
@@ -211,6 +215,25 @@ public class AiPrompt {
 		"""
 		{id:"infinite_craft:custom_crafted_item",count:4i,components:{"minecraft:item_model":"minecraft:ender_eye","minecraft:item_name":{text:"Blink Orb",color:"dark_purple"},"minecraft:max_stack_size":16,"minecraft:use_cooldown":{seconds:3.0f},"minecraft:consumable":{consume_seconds:0.1f,animation:"none",sound:"minecraft:entity.enderman.teleport",has_consume_particles:false,on_consume_effects:[{type:"minecraft:teleport_randomly",diameter:16.0f}]}}}"""
 	);
+
+	public record CraftedModel(String model, String description) {}
+
+	private static List<CraftedModel> craftedModels;
+
+	/** The mod's own item models, written by tools/textures/make_textures.py along with their art */
+	public static List<CraftedModel> craftedModels() {
+		if (craftedModels == null) {
+			try (InputStreamReader reader = new InputStreamReader(
+					AiPrompt.class.getResourceAsStream("/assets/infinite_craft/crafted_models.json"), StandardCharsets.UTF_8)) {
+				craftedModels = JsonParser.parseReader(reader).getAsJsonArray().asList().stream()
+					.map(e -> new CraftedModel(e.getAsJsonObject().get("model").getAsString(), e.getAsJsonObject().get("description").getAsString()))
+					.toList();
+			} catch (IOException e) {
+				throw new UncheckedIOException(e);
+			}
+		}
+		return craftedModels;
+	}
 
 	private static String getPowerToolkitTip(){
 		return """
@@ -236,6 +259,11 @@ public class AiPrompt {
 			\t\tTools: "minecraft:tool" with mining rules
 			\t\tMagic gadgets: a "minecraft:consumable" effect plus "minecraft:use_cooldown"; consumables are used up, so give several (count 2-8)
 			\t\tSaving the player from death: "minecraft:death_protection" (works like a totem, but ONLY while held in a hand, never on armor)
+			\tLooks: "minecraft:item_model" sets how an item looks. This mod has its own models; use one whenever it fits, it looks far better than a borrowed vanilla item:
+			""" + String.join("\n", craftedModels().stream().map(m -> "\t\t\"%s\": %s".formatted(m.model(), m.description())).toList()) + """
+
+			\t\tTheir glowing parts take the color the item shoots, or the first color in "minecraft:custom_model_data":{colors:[RGB int]}; set that for items that don't shoot, like a red lightsaber.
+			\t\tOtherwise use a vanilla item id as the model. Never make up a model id: it shows as a broken purple and black texture.
 			\tWorking examples for this version:
 			""" + String.join("\n", POWER_EXAMPLES.stream().map(e -> "\t\t" + e.strip()).toList()) + "\n";
 	}

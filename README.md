@@ -48,6 +48,13 @@ checks the golem got hurt and saves screenshots to `build/run/clientGameTest/scr
 `{kind:"beam"|"bullet", damage:6.0f, interval:10, count:1, spread:0.0f, color:"green", fire:false, sound:"minecraft:..."}`.
 `interval` is ticks between shots (4 is the fastest), `count` is shots per pull (shotguns). Respects `minecraft:use_cooldown`.
 
+### Item art
+
+The mod ships its own item models (ray gun, blaster, minigun, lightsaber, jetpack, energy drink and more) that Claude can pick with
+`"minecraft:item_model":"infinite_craft:ray_gun"`. Their glowing parts take the item's shoot color, or the first `minecraft:custom_model_data` color.
+The art is ASCII in `tools/textures/make_textures.py`; edit a sprite and run `python3 tools/textures/make_textures.py preview.png` to regenerate
+the textures, models and the list the prompt reads (`assets/infinite_craft/crafted_models.json`). `./gradlew runClientGameTest` screenshots them in game.
+
 ## System Requirements
 
 - Minecraft 1.21.10

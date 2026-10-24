@@ -23,6 +23,8 @@ Claude picks and tunes abilities through the structured-output schema; the mod s
 
 ## Other ideas
 
+- [x] **T12. Unique looks (art set).** *(done 2026-10-24, code side: 14 models drawn by `tools/textures/make_textures.py`; glow follows the shoot color or custom_model_data; guns held like crossbows, pointing forward in both hands and views; `ItemLooksClientGameTest` checks every model loads and screenshots them. Still to check: a user-run eval showing Claude picks these models, see the eval's "Mod looks" column)* Crafted items borrow a vanilla item's look, so the Nail Gun and Chain Gun both look like iron horse armor. Ship ~15 drawn 16×16 models (ray gun, blaster, minigun, shotgun, sniper, rocket launcher, flamethrower, nail gun, chainsaw, wand, lightsaber, power fist, jetpack, energy drink) whose glowing parts take the item's shoot color (or a custom_model_data color). Claude picks one with "minecraft:item_model":"infinite_craft:...". Judges: a test that every listed model has its files, the eval flagging item_model ids that don't exist, and client screenshots of each model in the hotbar and in hand.
+- [ ] **T13. Generated looks (stretch).** A unique pixel-art texture per crafted item, sent to every player and loaded at runtime. Closest to the video; its own project, and it adds cost to every craft.
 - [ ] **T10. Recipe memory.** Same ingredients give the same result per world; repeats are instant and free.
 - [ ] **T11. First-discovery fanfare.** Sound, particles and a "First discovery!" message for new results.
 - [ ] **Playtest.** Watch a 30-minute session, then read `logs/latest.log` (crafts, repeats, what got kept).

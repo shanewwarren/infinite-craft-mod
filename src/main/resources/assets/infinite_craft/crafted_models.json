@@ -1,0 +1,58 @@
+[
+  {
+    "model": "infinite_craft:ray_gun",
+    "description": "retro ray gun with glowing rings"
+  },
+  {
+    "model": "infinite_craft:laser_blaster",
+    "description": "sleek sci-fi laser blaster with a glowing stripe"
+  },
+  {
+    "model": "infinite_craft:nail_gun",
+    "description": "yellow power-tool nail gun"
+  },
+  {
+    "model": "infinite_craft:minigun",
+    "description": "rotary minigun / chain gun with three barrels"
+  },
+  {
+    "model": "infinite_craft:shotgun",
+    "description": "double-barrel shotgun with a wooden stock"
+  },
+  {
+    "model": "infinite_craft:sniper_rifle",
+    "description": "long sniper rifle with a scope"
+  },
+  {
+    "model": "infinite_craft:rocket_launcher",
+    "description": "green rocket launcher tube with a red rocket"
+  },
+  {
+    "model": "infinite_craft:flamethrower",
+    "description": "flamethrower with a red fuel tank"
+  },
+  {
+    "model": "infinite_craft:chainsaw",
+    "description": "orange chainsaw"
+  },
+  {
+    "model": "infinite_craft:magic_wand",
+    "description": "magic wand with a glowing star"
+  },
+  {
+    "model": "infinite_craft:lightsaber",
+    "description": "lightsaber; the blade takes the item's color"
+  },
+  {
+    "model": "infinite_craft:power_fist",
+    "description": "armored power fist / mega puncher gauntlet"
+  },
+  {
+    "model": "infinite_craft:jetpack",
+    "description": "jetpack with two red tanks and flames"
+  },
+  {
+    "model": "infinite_craft:energy_drink",
+    "description": "energy drink can; the band takes the item's color"
+  }
+]
