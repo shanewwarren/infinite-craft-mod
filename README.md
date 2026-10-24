@@ -31,6 +31,23 @@ To compare models on a fixed set of recipes (spends a little API credit), run
 `ANTHROPIC_API_KEY=... ./gradlew test --tests '*ClaudeCraftEval*' -DclaudeEval.models=claude-opus-5-5,claude-haiku-5-5`
 and read `build/claude-eval/report.md`.
 
+### Game tests: does each crafted item actually do something?
+
+`./gradlew runGameTest` (also part of `./gradlew build`) starts a test world and uses items the way a survival player would:
+drinks must apply their effects, weapons must hurt or launch a mob, armor must change the wearer's stats (and not end up weaker than its base item),
+gliders must glide, guns must fire with no ammo in the inventory, tools must mine faster. Reports land in `build/gametest/`:
+`prompt-examples.md` (the prompt's own examples, must all work) and `eval-items.md` (what Claude made in the last eval run, reported but
+allowed to fail; a failure there means the prompt needs work). `ShootTest` fires the guns over real ticks at a mob.
+
+`./gradlew runClientGameTest` opens a real game window, holds right click with a Ray Gun and a Chain Gun at an iron golem,
+checks the golem got hurt and saves screenshots to `build/run/clientGameTest/screenshots`.
+
+### Mod abilities Claude can give items
+
+`infinite_craft:shoot` makes any item fire while right click is held, with no ammo:
+`{kind:"beam"|"bullet", damage:6.0f, interval:10, count:1, spread:0.0f, color:"green", fire:false, sound:"minecraft:..."}`.
+`interval` is ticks between shots (4 is the fastest), `count` is shots per pull (shotguns). Respects `minecraft:use_cooldown`.
+
 ## System Requirements
 
 - Minecraft 1.21.10

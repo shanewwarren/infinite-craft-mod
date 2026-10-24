@@ -218,7 +218,7 @@ public class InfiniteCraftProcess {
      * Get ItemStack from an NBT String
      * Needs the world's registries: enchantments, sounds etc. are registry entries and get dropped without them
      */
-    static ItemStack parseItemStackFromNbt(String nbtString, RegistryWrapper.WrapperLookup registries) throws RuntimeException, CommandSyntaxException {
+    public static ItemStack parseItemStackFromNbt(String nbtString, RegistryWrapper.WrapperLookup registries) throws RuntimeException, CommandSyntaxException {
         InfiniteCraft.LOGGER.info("Parsing Item Stack From:\n" + nbtString);
         NbtCompound nbt = StringNbtReader.readCompound(nbtString);
         ItemStack itemStack = ItemStack.CODEC.parse(registries.getOps(NbtOps.INSTANCE), nbt)

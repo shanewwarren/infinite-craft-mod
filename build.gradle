@@ -233,6 +233,20 @@ fabricApi {
 	configureDataGeneration() {
 		client = true
 	}
+	// Server game tests in src/gametest: they use crafted items in a real world. Run with `./gradlew runGameTest`; `test` runs them too
+	configureTests {
+		createSourceSet = true
+		modId = "infinite-craft-test"
+		enableGameTests = true
+		enableClientGameTests = true
+		eula = true // By setting this to true, you agree to the Minecraft EULA.
+	}
+}
+
+tasks.named('runGameTest') {
+	systemProperty 'infiniteCraft.reportDir', layout.buildDirectory.dir('gametest').get().asFile.path
+	// items from the last Claude eval run, if any; otherwise the test uses its checked-in snapshot
+	systemProperty 'infiniteCraft.evalItems', layout.buildDirectory.file('claude-eval/crafted_items.txt').get().asFile.path
 }
 
 test {

@@ -2,7 +2,6 @@ package com.infinite_craft.process;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -17,6 +16,7 @@ import com.google.gson.JsonObject;
 import com.infinite_craft.InfiniteCraft;
 import com.infinite_craft.InfiniteCraftConfig;
 import com.infinite_craft.InfiniteItem;
+import com.infinite_craft.ability.Abilities;
 import com.infinite_craft.ai.AiPrompt;
 import com.infinite_craft.ai.Claude;
 import com.infinite_craft.element.ElementItems;
@@ -56,6 +56,7 @@ public class ClaudeCraftEval {
 	static void bootstrap() {
 		SharedConstants.createGameVersion();
 		Bootstrap.initialize();
+		Abilities.initialize();
 		InfiniteItem.initialize();
 		ElementItems.initialize();
 		registries = BuiltinRegistries.createWrapperLookup();
@@ -97,8 +98,22 @@ public class ClaudeCraftEval {
 	private static final Set<String> FUNCTIONAL = Set.of(
 		"minecraft:attribute_modifiers", "minecraft:consumable", "minecraft:food", "minecraft:equippable",
 		"minecraft:glider", "minecraft:tool", "minecraft:weapon", "minecraft:enchantments", "minecraft:death_protection",
-		"minecraft:blocks_attacks", "minecraft:damage_resistant", "minecraft:charged_projectiles"
+		"minecraft:blocks_attacks", "minecraft:damage_resistant", "minecraft:charged_projectiles",
+		"infinite_craft:shoot"
 	);
+
+	// The video's guns: each should shoot with no ammo, and feel different from the others
+	private static final List<String> GUN_WISHES = List.of("wish: Ray Gun", "wish: Nail Gun", "wish: Chain Gun");
+
+	/** How a gun result shoots, e.g. `beam 6 dmg every 10t`, or why it doesn't shoot without ammo */
+	static String gunSummary(String nbt) throws Exception {
+		NbtCompound components = StringNbtReader.readCompound(nbt).getCompound("components").orElse(new NbtCompound());
+		Optional<NbtCompound> shoot = components.getCompound("infinite_craft:shoot");
+		if (shoot.isEmpty()) return "no shoot (needs ammo)";
+		NbtCompound s = shoot.get();
+		return "%s %s dmg every %st%s%s".formatted(s.getString("kind").orElse("beam"), s.get("damage"), s.get("interval"),
+			s.contains("count") ? " ×" + s.get("count") : "", s.contains("spread") ? " spread " + s.get("spread") : "");
+	}
 
 	/**
 	 * Vanilla items behave like themselves; a custom item only does something through the components it was given.
@@ -154,12 +169,14 @@ public class ClaudeCraftEval {
 	}
 
 	@Test
-	void compareModels() throws IOException {
+	void compareModels() throws Exception {
 		String apiKey = System.getenv("ANTHROPIC_API_KEY");
 		assumeTrue(apiKey != null && !apiKey.isEmpty(), "ANTHROPIC_API_KEY not set, skipping the Claude eval");
 
 		StringBuilder report = new StringBuilder("# Claude craft eval\n\n");
-		StringBuilder summary = new StringBuilder("| Model | Clean | Usable | Inert | Failed | Avg time | Cost | Cost per craft |\n|---|---|---|---|---|---|---|---|\n");
+		StringBuilder summary = new StringBuilder("| Model | Clean | Usable | Inert | Failed | Avg time | Cost | Cost per craft | Video guns |\n|---|---|---|---|---|---|---|---|---|\n");
+		// every item result, for the game test to use in a real world (see CraftedItemUseTest)
+		StringBuilder fixtures = new StringBuilder("# Crafted items from the last Claude eval. One per line: label<TAB>item NBT\n");
 
 		for (String model : System.getProperty("claudeEval.models", "claude-opus-5-5").split(",")) {
 			InfiniteCraftConfig config = new InfiniteCraftConfig();
@@ -181,8 +198,17 @@ public class ClaudeCraftEval {
 			long failed = results.size() - clean - usable - inert;
 			double avgSeconds = results.stream().mapToLong(Result::millis).average().orElse(0) / 1000;
 			double cost = InfiniteCraft.claude.getSessionCost();
-			summary.append("| %s | %d | %d | %d | %d | %.1fs | $%.4f | $%.4f |\n".formatted(
-				model, clean, usable, inert, failed, avgSeconds, cost, cost / results.size()));
+			List<String> guns = new ArrayList<>();
+			for (Result r : results) {
+				if (r.detail.startsWith("{")) {
+					fixtures.append(model.replace("claude-", "")).append(": ").append(r.recipe).append('\t').append(r.detail).append('\n');
+				}
+				if (GUN_WISHES.contains(r.recipe)) {
+					guns.add(r.recipe.replace("wish: ", "") + ": " + (r.detail.startsWith("{") ? gunSummary(r.detail) : r.verdict));
+				}
+			}
+			summary.append("| %s | %d | %d | %d | %d | %.1fs | $%.4f | $%.4f | %s |\n".formatted(
+				model, clean, usable, inert, failed, avgSeconds, cost, cost / results.size(), String.join("<br>", guns)));
 
 			report.append("## ").append(model).append("\n\n| Recipe | Verdict | Time | Result |\n|---|---|---|---|\n");
 			for (Result r : results) {
@@ -198,6 +224,7 @@ public class ClaudeCraftEval {
 		Path out = Path.of("build", "claude-eval", "report.md");
 		Files.createDirectories(out.getParent());
 		Files.writeString(out, full);
+		Files.writeString(out.resolveSibling("crafted_items.txt"), fixtures);
 		System.out.println(full);
 		System.out.println("Report written to " + out.toAbsolutePath());
 	}

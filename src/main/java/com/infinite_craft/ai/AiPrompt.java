@@ -192,9 +192,12 @@ public class AiPrompt {
 		// knockback weapon
 		"""
 		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:piston","minecraft:item_name":{text:"Mega Puncher",color:"red"},"minecraft:max_stack_size":1,"minecraft:attribute_modifiers":[{type:"minecraft:attack_knockback",id:"infinite_craft:punch",amount:6.0d,operation:"add_value",slot:"mainhand"},{type:"minecraft:attack_damage",id:"infinite_craft:punch_damage",amount:3.0d,operation:"add_value",slot:"mainhand"}]}}""",
-		// gun: a vanilla crossbow already shoots, enchantments make it fast
+		// beam gun: infinite_craft:shoot fires with no ammo
 		"""
-		{id:"minecraft:crossbow",count:1i,components:{"minecraft:item_name":{text:"Nail Gun",color:"gray"},"minecraft:unbreakable":{},"minecraft:enchantments":{"minecraft:quick_charge":3,"minecraft:multishot":1,"minecraft:piercing":4},"minecraft:charged_projectiles":[{id:"minecraft:arrow",count:1}]}}""",
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:blaze_rod","minecraft:item_name":{text:"Laser Blaster",color:"red"},"minecraft:max_stack_size":1,"infinite_craft:shoot":{kind:"beam",damage:6.0f,color:"red",interval:10}}}""",
+		// rapid-fire bullet gun
+		"""
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:iron_horse_armor","minecraft:item_name":{text:"Minigun",color:"gray"},"minecraft:max_stack_size":1,"infinite_craft:shoot":{kind:"bullet",damage:3.0f,color:"gold",interval:4,spread:3.0f}}}""",
 		// flying wearable
 		"""
 		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:elytra","minecraft:item_name":{text:"Jetpack",color:"yellow"},"minecraft:max_stack_size":1,"minecraft:equippable":{slot:"chest"},"minecraft:glider":{},"minecraft:attribute_modifiers":[{type:"minecraft:gravity",id:"infinite_craft:jetpack_float",amount:-0.04d,operation:"add_value",slot:"chest"},{type:"minecraft:safe_fall_distance",id:"infinite_craft:jetpack_landing",amount:20.0d,operation:"add_value",slot:"chest"}]}}""",
@@ -219,9 +222,12 @@ public class AiPrompt {
 			\tPick the base item or components that make the idea work:
 			\t\tFood, drinks, potions: "minecraft:consumable" with on_consume_effects (apply_effects, teleport_randomly, clear_all_effects), optionally "minecraft:food"
 			\t\tMelee weapons: "minecraft:weapon" plus attack_damage / attack_speed / attack_knockback attribute modifiers on mainhand
-			\t\tGuns, blasters, launchers: a minecraft:crossbow or minecraft:bow base (they really shoot) with quick_charge, multishot, piercing, power, punch or flame.
-			\t\t\tThey need arrows to fire, so preload a crossbow with "minecraft:charged_projectiles" (arrows, or a colored firework_rocket for blasts) so it is ready to shoot.
-			\t\t\tMake different guns feel different: a chain gun reloads instantly (quick_charge 5), a shotgun spreads (multishot), a sniper hits hard (bow with high power).
+			\t\tAnything that shoots (guns, blasters, ray guns, lasers, wands, launchers, magic bows): "infinite_craft:shoot", this mod's component. It fires with NO ammo while right click is held.
+			\t\t\tFields: kind ("beam": instant colored ray, for lasers, ray guns, wands; "bullet": fast projectile, for nail guns, machine guns, shotguns, bows),
+			\t\t\tdamage (per hit; a zombie has 20 health, a diamond sword does 7), interval (ticks between shots: 4 is the fastest, 20 is once a second),
+			\t\t\tcount (shots per pull, e.g. 5 for a shotgun), spread (aim error in degrees), color (a color name or "#RRGGBB"), fire (true sets targets on fire), optional sound (a sound event id).
+			\t\t\tMake different guns feel different: a chain gun fires every 4 ticks with some spread, a ray gun is a colored beam, a shotgun fires several bullets with wide spread, a sniper is slow and hits hard.
+			\t\t\tGive it a fitting "minecraft:item_model" on infinite_craft:custom_crafted_item. A vanilla bow or crossbow alone needs arrows the player may not have, so add "infinite_craft:shoot" to those too.
 			\t\tPunchers, hammers: minecraft:mace (wind_burst, density, breach) or a big attack_knockback modifier
 			\t\tArmor and wearables: a vanilla armor base or "minecraft:equippable", with armor, max_health, movement_speed, jump_strength, scale, safe_fall_distance modifiers on that slot.
 			\t\t\tAttribute modifiers REPLACE the base armor's own stats, so give at least the base item's armor and toughness (e.g. iron chestplate 6 armor, diamond chestplate 8 armor + 2 toughness) plus the extras.
