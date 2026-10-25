@@ -87,7 +87,9 @@ public class ClaudeCraftEval {
 			new Recipe("wish: Thor's Hammer", List.of(named(Items.IRON_BLOCK, "Thor's Hammer"), new ItemStack(Items.STICK))),
 			new Recipe("wish: Dash Boots", List.of(named(Items.LEATHER_BOOTS, "Dash Boots"), new ItemStack(Items.FEATHER))),
 			new Recipe("wish: Steam Armor", List.of(named(Items.IRON_CHESTPLATE, "Steam Armor"), new ItemStack(Items.WATER_BUCKET))),
-			new Recipe("wish: God Armor", List.of(named(Items.DIAMOND_CHESTPLATE, "God Armor"), new ItemStack(Items.GOLDEN_APPLE)))
+			new Recipe("wish: God Armor", List.of(named(Items.DIAMOND_CHESTPLATE, "God Armor"), new ItemStack(Items.GOLDEN_APPLE))),
+			new Recipe("wish: Tank", List.of(named(Items.IRON_BLOCK, "Tank"), new ItemStack(Items.TNT))),
+			new Recipe("wish: Race Car", List.of(named(Items.MINECART, "Race Car"), new ItemStack(Items.REDSTONE)))
 		);
 	}
 
@@ -102,12 +104,27 @@ public class ClaudeCraftEval {
 		"minecraft:attribute_modifiers", "minecraft:consumable", "minecraft:food", "minecraft:equippable",
 		"minecraft:glider", "minecraft:tool", "minecraft:weapon", "minecraft:enchantments", "minecraft:death_protection",
 		"minecraft:blocks_attacks", "minecraft:damage_resistant", "minecraft:charged_projectiles",
-		"infinite_craft:shoot", "infinite_craft:thrust", "infinite_craft:launch", "infinite_craft:dash", "infinite_craft:aura"
+		"infinite_craft:shoot", "infinite_craft:thrust", "infinite_craft:launch", "infinite_craft:dash", "infinite_craft:aura",
+		"infinite_craft:vehicle"
 	);
 
 	// The video's guns: each should shoot with no ammo, and feel different from the others; the last two should blast
 	private static final List<String> GUN_WISHES = List.of("wish: Ray Gun", "wish: Nail Gun", "wish: Chain Gun",
 		"wish: Rocket Launcher", "wish: Thor's Hammer");
+
+	// Vehicles: a Tank should drive and blast, a Race Car should be a faster car
+	private static final List<String> VEHICLE_WISHES = List.of("wish: Tank", "wish: Race Car");
+
+	/** What a vehicle result is, e.g. `tank 6.0f b/s 120.0f hp, gun rocket 10.0f dmg every 30t explode 3.0f`, or `no vehicle` */
+	static String vehicleSummary(String nbt) throws Exception {
+		NbtCompound components = StringNbtReader.readCompound(nbt).getCompound("components").orElse(new NbtCompound());
+		Optional<NbtCompound> vehicle = components.getCompound("infinite_craft:vehicle");
+		if (vehicle.isEmpty()) return "no vehicle";
+		NbtCompound v = vehicle.get();
+		return "%s %s b/s %s hp%s, %s".formatted(v.getString("body").orElse("tank"), v.get("speed"), v.get("health"),
+			v.contains("size") ? " size " + v.get("size") : "",
+			components.contains("infinite_craft:shoot") ? "gun " + gunSummary(nbt) : "no gun");
+	}
 
 	/** How a gun result shoots, e.g. `beam 6 dmg every 10t`, or why it doesn't shoot without ammo */
 	static String gunSummary(String nbt) throws Exception {
@@ -141,6 +158,14 @@ public class ClaudeCraftEval {
 			String nbt = "{id:\"minecraft:bow\",count:1i,components:{\"infinite_craft:shoot\":{kind:\"bullet\",color:" + color + "}}}";
 			if (!parsesCleanly(nbt)) throw new AssertionError("shoot color " + color + " doesn't parse");
 		}
+	}
+
+	@Test
+	void summarizesVehicles() throws Exception {
+		String tank = AiPrompt.POWER_EXAMPLES.stream().filter(e -> e.contains("infinite_craft:vehicle")).findFirst().orElseThrow().strip();
+		String summary = vehicleSummary(tank);
+		if (!summary.startsWith("tank 6.0f b/s 120.0f hp, gun rocket")) throw new AssertionError("vehicle summary: " + summary);
+		if (!vehicleSummary("{id:\"minecraft:stick\",count:1i}").equals("no vehicle")) throw new AssertionError("a stick summarized as a vehicle");
 	}
 
 	@Test
@@ -215,7 +240,7 @@ public class ClaudeCraftEval {
 		assumeTrue(apiKey != null && !apiKey.isEmpty(), "ANTHROPIC_API_KEY not set, skipping the Claude eval");
 
 		StringBuilder report = new StringBuilder("# Claude craft eval\n\n");
-		StringBuilder summary = new StringBuilder("| Model | Clean | Usable | Inert | Failed | Avg time | Cost | Cost per craft | Video guns | Mod looks |\n|---|---|---|---|---|---|---|---|---|---|\n");
+		StringBuilder summary = new StringBuilder("| Model | Clean | Usable | Inert | Failed | Avg time | Cost | Cost per craft | Video guns and vehicles | Mod looks |\n|---|---|---|---|---|---|---|---|---|---|\n");
 		// every item result, for the game test to use in a real world (see CraftedItemUseTest)
 		StringBuilder fixtures = new StringBuilder("# Crafted items from the last Claude eval. One per line: label<TAB>item NBT\n");
 
@@ -250,6 +275,9 @@ public class ClaudeCraftEval {
 				}
 				if (GUN_WISHES.contains(r.recipe)) {
 					guns.add(r.recipe.replace("wish: ", "") + ": " + (r.detail.startsWith("{") ? gunSummary(r.detail) : r.verdict));
+				}
+				if (VEHICLE_WISHES.contains(r.recipe)) {
+					guns.add(r.recipe.replace("wish: ", "") + ": " + (r.detail.startsWith("{") ? vehicleSummary(r.detail) : r.verdict));
 				}
 			}
 			summary.append("| %s | %d | %d | %d | %d | %.1fs | $%.4f | $%.4f | %s | %d: %s |\n".formatted(

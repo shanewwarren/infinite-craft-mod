@@ -1,6 +1,7 @@
 package com.infinite_craft.ability;
 
 import com.infinite_craft.InfiniteCraft;
+import com.infinite_craft.vehicle.Vehicles;
 
 import net.fabricmc.fabric.api.item.v1.ComponentTooltipAppenderRegistry;
 import net.minecraft.component.ComponentType;
@@ -45,13 +46,21 @@ public class Abilities {
 		ComponentType.<AuraComponent>builder().codec(AuraComponent.CODEC).build()
 	);
 
+	public static final ComponentType<VehicleComponent> VEHICLE = Registry.register(
+		Registries.DATA_COMPONENT_TYPE,
+		Identifier.of(InfiniteCraft.MOD_ID, "vehicle"),
+		ComponentType.<VehicleComponent>builder().codec(VehicleComponent.CODEC).build()
+	);
+
 	public static void initialize() {
 		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, SHOOT);
 		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, THRUST);
 		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, LAUNCH);
 		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, DASH);
 		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, AURA);
+		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, VEHICLE);
 		LaunchAbility.initialize();
 		Blast.initialize();
+		Vehicles.initialize();
 	}
 }

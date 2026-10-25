@@ -18,6 +18,8 @@ import com.infinite_craft.ability.AuraComponent;
 import com.infinite_craft.ability.ShootComponent;
 import com.infinite_craft.ai.AiPrompt;
 import com.infinite_craft.process.InfiniteCraftProcess;
+import com.infinite_craft.vehicle.VehicleEntity;
+import com.infinite_craft.vehicle.VehicleFire;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.block.Block;
@@ -138,7 +140,10 @@ public class CraftedItemUseTest {
 		if (stack.contains(Abilities.THRUST)) checks.add(fly(context, stack));
 		if (stack.contains(Abilities.DASH)) checks.add(dash(context, stack));
 		if (stack.contains(Abilities.AURA)) checks.add(aura(context, stack));
-		if (stack.contains(Abilities.SHOOT) || stack.getItem() instanceof CrossbowItem || stack.getItem() instanceof BowItem) {
+		if (stack.contains(Abilities.VEHICLE)) {
+			// a vehicle's gun fires only from the vehicle, so drive() checks it
+			checks.add(drive(context, stack));
+		} else if (stack.contains(Abilities.SHOOT) || stack.getItem() instanceof CrossbowItem || stack.getItem() instanceof BowItem) {
 			checks.add(shoot(context, stack));
 		}
 		// a sword's built-in cobweb rule is vanilla behavior, only test mining rules the crafted item brings
@@ -388,6 +393,34 @@ public class CraftedItemUseTest {
 		return new Check("shoot", passed, "%d projectiles%s, %.0f beam damage to a mob in %ds%s, no ammo".formatted(
 			fired.size(), fired.isEmpty() ? "" : " (" + EntityType.getId(fired.get(0).getType()).getPath() + ")", damage, TRIGGER_TICKS / 20,
 			transformed ? " (struck by lightning, it transformed)" : ""));
+	}
+
+	// --- vehicle: placed on the floor, a player gets in and drives it; one with a gun fires it.
+	// The test area's walls stop it after a few blocks (VehicleTest drives on a runway)
+
+	private static Check drive(TestContext context, ItemStack stack) {
+		VehicleEntity vehicle = VehicleEntity.place(context.getWorld(), stack, context.getAbsolute(new Vec3d(4.5, 1, 1.5)), 0);
+		if (vehicle == null) {
+			return new Check("drive", false, "couldn't place it");
+		}
+		PlayerEntity player = context.createMockPlayer(GameMode.SURVIVAL);
+		player.refreshPositionAndAngles(vehicle.getX(), vehicle.getY(), vehicle.getZ(), 0, 0);
+		player.startRiding(vehicle, true, false);
+		Vec3d start = vehicle.getEntityPos();
+		// this runs within one tick of the world, so tick the vehicle here; it ticks its rider
+		for (int t = 0; t < 20; t++) {
+			player.forwardSpeed = 1;
+			vehicle.age++;
+			vehicle.tick();
+		}
+		double drove = vehicle.getEntityPos().subtract(start).horizontalLength();
+		boolean hasGun = stack.contains(Abilities.SHOOT);
+		boolean fired = hasGun && VehicleFire.fire(player);
+		Box around = vehicle.getBoundingBox().expand(8);
+		context.getWorld().getEntitiesByClass(ProjectileEntity.class, around, e -> true).forEach(ProjectileEntity::discard);
+		vehicle.discard();
+		return new Check("drive", drove >= 2 && (!hasGun || fired), "%s drove %.1f blocks in 1s%s".formatted(vehicle.vehicle().body().asString(),
+			drove, hasGun ? (fired ? ", its gun fired" : ", its gun didn't fire") : ""));
 	}
 
 	/** One tick of a player holding right click: the client repeats use every 4 ticks, and a drawn bow or crossbow is released */

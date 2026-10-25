@@ -5,7 +5,8 @@
 	"client": [
 		"HandledScreenAccessor",
 		"CraftingScreenMixin",
-		"ItemModelManagerMixin"
+		"ItemModelManagerMixin",
+		"MinecraftClientMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

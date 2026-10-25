@@ -45,13 +45,21 @@ must leave every block in place; rockets and destroy:true shots must blow holes 
 `AuraTest` wears God Armor for a minute and checks its effects, real healing, that they come off with it, and that its aura
 hurts a husk but not a pig or a pet wolf. `LaunchTest` and `DashTest` run on a 48-block runway (`data/infinite-craft-test/gametest/structure/runway.snbt`), since the default
 test area is walled in by barriers at 8 blocks, which would cap any flight or dash at about 3 blocks.
+`VehicleTest` places a Tank and a car from their items, drives them down the runway with a mock player at the wheel (the tank must
+cover 25 blocks in 5 s, climb a 1-block step and turn in place; the car must be at least 1.6× faster), and fires the tank's gun from
+the barrel. It checks the vehicle never hurts its rider: no fall damage, its own point-blank shell leaves it whole, rams hurt mobs but
+never players, pets or armor stands, getting out never lands the rider in a wall. Sneak-hitting it gives the item back, and so does destroying it.
 
 `./gradlew runClientGameTest` opens a real game window, holds right click with a Ray Gun and a Chain Gun at an iron golem,
 checks the golem got hurt and saves screenshots to `build/run/clientGameTest/screenshots`. It also fires a rocket and a lightning wand
 at a golem, and a rocket point-blank into a glass wall, which must blow a hole in the wall but leave the player unharmed
 (and leave the wall whole with the gamerule off). It punches an iron golem
 with a Mega Puncher, dashes in singleplayer, and triple-dashes on a dedicated server without `allow-flight`, where the server must agree
-with the client on where the player ended up.
+with the client on where the player ended up. `VehicleClientGameTest` places a Tank, drives it, fires at a husk and point-blank at the ground
+(the rider must stay unhurt and the dirt in their hand unplaced), then drives for 30 s on a dedicated server without `allow-flight`.
+
+Fabric runs every client test in one window. While working on one, `./gradlew runClientGameTest -PclientTests=Vehicle` runs only the
+tests whose class name contains `Vehicle` (comma-separate several); without it they all run.
 
 ### Mod abilities Claude can give items
 
@@ -78,6 +86,13 @@ normal rate) and come off within half a second when it's removed; particles swir
 `infinite_craft:thrust` makes a worn (or held) item a jetpack: hold jump to fly up, hold forward to zoom ahead.
 `{power:1.0f, speed:1.5f}`; power 1 climbs about 7 blocks a second. Works on servers without `allow-flight`
 (the floating kick is skipped while it fires). `equippable` `asset_id:"infinite_craft:jetpack"` shows tanks on the player's back.
+
+`infinite_craft:vehicle` makes the item a vehicle you ride: use it on the ground to place it, right-click it to get in, W/S to drive,
+A/D to steer, shift to get out. `{body:"tank"|"car", speed:6.0f, health:120.0f, color:"#556B2F", size:1.0f}`; speed is in blocks per second
+(tank 6 and car 12 by default; running is about 5.6), size 0.5 to 2 scales it. A tank turns in place and its turret aims where the rider looks;
+a car steers while moving. The item's `infinite_craft:shoot` is its gun: right click while driving fires it from the barrel, never from the hand.
+It never hurts its rider (its own shells, rams, falls). Ramming hurts mobs, never players, pets or armor stands. Anyone can drive or pack up
+any vehicle; sneak-hitting it gives the item back repaired, and a destroyed vehicle drops its item too. Ground vehicles only, for now.
 
 ### Item art
 

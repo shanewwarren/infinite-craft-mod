@@ -23,6 +23,7 @@ public class ItemLooksClientGameTest implements FabricClientGameTest {
 
 	@Override
 	public void runTest(ClientGameTestContext context) {
+		if (ClientTestFilter.skip(getClass())) return;
 		List<String> models = AiPrompt.craftedModels().stream().map(AiPrompt.CraftedModel::model).toList();
 
 		List<String> missing = new ArrayList<>();

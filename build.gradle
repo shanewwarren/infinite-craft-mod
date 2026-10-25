@@ -249,6 +249,11 @@ tasks.named('runGameTest') {
 	systemProperty 'infiniteCraft.evalItems', layout.buildDirectory.file('claude-eval/crafted_items.txt').get().asFile.path
 }
 
+tasks.named('runClientGameTest') {
+	// -PclientTests=Vehicle runs only the client tests whose class name contains Vehicle (see ClientTestFilter)
+	systemProperty 'infiniteCraft.clientTests', project.findProperty('clientTests') ?: ''
+}
+
 test {
 	useJUnitPlatform()
 	// Forward the eval settings to the test JVM; without ANTHROPIC_API_KEY the eval is skipped
