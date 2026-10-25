@@ -88,6 +88,8 @@ that fires, wears and throws away crafted items and then reads its own `latest.l
 `destroy:false`, other shots don't unless they have `destroy:true`. To keep builds safe in a world, run
 `/gamerule infiniteCraftBlastsBreakBlocks false`. Blasts never start fires, charge creepers or hurt the shooter,
 their pets, armor stands or dropped items, and lightning never breaks blocks.
+`effects:[{id:"minecraft:slowness",amplifier:3,seconds:6.0f}]` puts status effects on each mob a shot hits (a freeze ray), never on
+the shooter or their pets; amplifier 0 to 3, 1 to 30 seconds, up to 4 effects.
 
 `infinite_craft:launch` makes a melee hit fling the mob away in an arc with a cloud trail, even mobs that resist knockback:
 `{power:2.0f, up:0.8f}`; power 1 lands a pig about 10 blocks away, 3 about 30; up 0 skims the ground, 2 goes nearly straight up.
@@ -110,6 +112,12 @@ A/D to steer, shift to get out. `{body:"tank"|"car", speed:6.0f, health:120.0f, 
 a car steers while moving. The item's `infinite_craft:shoot` is its gun: right click while driving fires it from the barrel, never from the hand.
 It never hurts its rider (its own shells, rams, falls). Ramming hurts mobs, never players, pets or armor stands. Anyone can drive or pack up
 any vehicle; sneak-hitting it gives the item back repaired, and a destroyed vehicle drops its item too. Ground vehicles only, for now.
+
+`infinite_craft:attributes` is a consume effect for `minecraft:consumable`'s `on_consume_effects`: attribute modifiers for a while, which
+vanilla potions can't do. A Shrink Potion: `{type:"infinite_craft:attributes", seconds:30.0f, modifiers:[{type:"minecraft:scale",
+id:"infinite_craft:shrink", amount:-0.75d, operation:"add_multiplied_total"}]}` (the `attribute_modifiers` format without a slot;
+1 to 600 seconds, up to 6 modifiers). Drinking another restarts the time instead of stacking; they come off when time runs out, on death,
+and on logging out (they're never saved). A player whose size changes doesn't suffocate in a low ceiling while it lasts and for 3 s after.
 
 ### Item art
 

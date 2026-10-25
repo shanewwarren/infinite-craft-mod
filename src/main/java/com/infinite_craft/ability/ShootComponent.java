@@ -1,5 +1,6 @@
 package com.infinite_craft.ability;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -11,6 +12,7 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.minecraft.component.ComponentsAccess;
+import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.item.Item;
 import net.minecraft.item.tooltip.TooltipAppender;
 import net.minecraft.item.tooltip.TooltipType;
@@ -40,10 +42,27 @@ import net.minecraft.util.math.MathHelper;
  * @param destroy  the explosion breaks blocks like TNT; defaults to true for rockets and false otherwise.
  *                 The world's infiniteCraftBlastsBreakBlocks gamerule can switch it off everywhere
  * @param sound    sound when firing; defaults by kind
+ * @param effects  status effects put on each mob a shot hits (a freeze ray's slowness), never on the shooter or their pets
  */
 public record ShootComponent(Kind kind, float damage, int color, int interval, int count, float spread, boolean fire,
-	float explode, boolean lightning, boolean destroy, Optional<RegistryEntry<SoundEvent>> sound)
+	float explode, boolean lightning, boolean destroy, Optional<RegistryEntry<SoundEvent>> sound, List<HitEffect> effects)
 	implements TooltipAppender {
+
+	/** E.g. {id:"minecraft:slowness",amplifier:3,seconds:6.0f} */
+	public record HitEffect(RegistryEntry<StatusEffect> id, int amplifier, float seconds) {
+
+		public HitEffect {
+			// like the aura: resistance V would make a mob invulnerable
+			amplifier = MathHelper.clamp(amplifier, 0, 3);
+			seconds = MathHelper.clamp(seconds, 1, 30);
+		}
+
+		public static final Codec<HitEffect> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+			StatusEffect.ENTRY_CODEC.fieldOf("id").forGetter(HitEffect::id),
+			Codec.INT.optionalFieldOf("amplifier", 0).forGetter(HitEffect::amplifier),
+			Codec.FLOAT.optionalFieldOf("seconds", 5.0f).forGetter(HitEffect::seconds)
+		).apply(instance, HitEffect::new));
+	}
 
 	public ShootComponent {
 		// keep whatever Claude writes playable
@@ -56,6 +75,7 @@ public record ShootComponent(Kind kind, float damage, int color, int interval, i
 		if (kind == Kind.ROCKET && explode == 0) {
 			explode = 2;
 		}
+		effects = effects.stream().limit(4).toList();
 	}
 
 	// Minecraft's text colors only have 16 names; Claude also writes everyday ones like "orange"
@@ -87,10 +107,11 @@ public record ShootComponent(Kind kind, float damage, int color, int interval, i
 		Codec.FLOAT.optionalFieldOf("explode", 0.0f).forGetter(ShootComponent::explode),
 		Codec.BOOL.optionalFieldOf("lightning", false).forGetter(ShootComponent::lightning),
 		Codec.BOOL.optionalFieldOf("destroy").forGetter(shoot -> Optional.of(shoot.destroy())),
-		SoundEvent.ENTRY_CODEC.optionalFieldOf("sound").forGetter(ShootComponent::sound)
-	).apply(instance, (kind, damage, color, interval, count, spread, fire, explode, lightning, destroy, sound) ->
+		SoundEvent.ENTRY_CODEC.optionalFieldOf("sound").forGetter(ShootComponent::sound),
+		HitEffect.CODEC.listOf().optionalFieldOf("effects", List.of()).forGetter(ShootComponent::effects)
+	).apply(instance, (kind, damage, color, interval, count, spread, fire, explode, lightning, destroy, sound, effects) ->
 		// a rocket launcher is expected to wreck things; a ray gun with a small blast isn't
-		new ShootComponent(kind, damage, color, interval, count, spread, fire, explode, lightning, destroy.orElse(kind == Kind.ROCKET), sound)));
+		new ShootComponent(kind, damage, color, interval, count, spread, fire, explode, lightning, destroy.orElse(kind == Kind.ROCKET), sound, effects)));
 
 	@Override
 	public void appendTooltip(Item.TooltipContext context, Consumer<Text> textConsumer, TooltipType type, ComponentsAccess components) {
@@ -114,6 +135,12 @@ public record ShootComponent(Kind kind, float damage, int color, int interval, i
 		}
 		if (lightning) {
 			textConsumer.accept(Text.translatableWithFallback("item.infinite_craft.shoot.lightning", "Calls down lightning").formatted(Formatting.YELLOW));
+		}
+		for (HitEffect effect : effects) {
+			Text name = Text.translatable(effect.id().value().getTranslationKey());
+			textConsumer.accept(Text.translatableWithFallback("item.infinite_craft.shoot.effect", "Hits give: %s", effect.amplifier() > 0
+				? Text.translatable("potion.withAmplifier", name, Text.translatable("potion.potency." + effect.amplifier()))
+				: name).formatted(Formatting.AQUA));
 		}
 	}
 

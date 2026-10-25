@@ -54,6 +54,8 @@ public class BehaviorSignature {
 			if (kind.equals("rocket") || shoot.getFloat("explode").orElse(0f) > 0) token.append(",explode");
 			if (shoot.getBoolean("lightning").orElse(false)) token.append(",lightning");
 			if (shoot.getBoolean("fire").orElse(false)) token.append(",fire");
+			// Part B: what a hit puts on a mob, e.g. shoot(beam,hit_slowness) for a freeze ray
+			ids(shoot.getList("effects")).forEach(effect -> token.append(",hit_").append(effect));
 			tokens.add(token.append(")").toString());
 		});
 		components.getCompound("infinite_craft:vehicle").ifPresent(vehicle -> tokens.add("vehicle(" + vehicle.getString("body").orElse("tank") + ")"));
@@ -69,6 +71,10 @@ public class BehaviorSignature {
 					case "teleport_randomly" -> parts.add("teleport");
 					case "clear_all_effects" -> parts.add("clear_effects");
 					case "remove_effects" -> parts.add("remove_effects");
+					// Part B: a potion that changes you for a while, e.g. timed_scale for a Shrink Potion
+					case "infinite_craft:attributes" -> compounds(effect.getList("modifiers")).stream()
+						.map(m -> shortId(m.getString("type").orElse(""))).filter(t -> !t.isEmpty() && !STAT_ATTRIBUTES.contains(t))
+						.forEach(t -> parts.add("timed_" + t));
 					default -> {}
 				}
 			}

@@ -30,9 +30,14 @@ public abstract class PersistentProjectileEntityMixin {
 	private void infiniteCraft$bulletBlastsOnMobs(EntityHitResult entityHitResult, CallbackInfo ci) {
 		PersistentProjectileEntity self = (PersistentProjectileEntity) (Object) this;
 		ShootComponent shoot = ShootAbility.bulletShoot(self);
-		if (self.getCommandTags().contains(ShootAbility.BULLET_TAG) && shoot != null && self.getEntityWorld() instanceof ServerWorld world
-				&& (shoot.explode() > 0 || shoot.lightning())) {
-			Entity target = entityHitResult.getEntity();
+		if (!self.getCommandTags().contains(ShootAbility.BULLET_TAG) || shoot == null) {
+			return;
+		}
+		Entity target = entityHitResult.getEntity();
+		if (!self.getEntityWorld().isClient()) {
+			ShootAbility.applyHitEffects(target, shoot, self.getOwner());
+		}
+		if (self.getEntityWorld() instanceof ServerWorld world && (shoot.explode() > 0 || shoot.lightning())) {
 			Blast.at(world, target.getEntityPos(), shoot, self, self.getOwner(), target);
 			// a bullet that bounced off (a shield, say) would blast again where it lands
 			self.discard();

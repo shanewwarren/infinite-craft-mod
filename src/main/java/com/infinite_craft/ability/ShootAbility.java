@@ -12,6 +12,7 @@ import net.minecraft.component.type.FireworksComponent;
 import net.minecraft.component.type.UseCooldownComponent;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ArrowEntity;
 import net.minecraft.entity.projectile.FireworkRocketEntity;
@@ -127,6 +128,19 @@ public class ShootAbility {
 			target.setOnFireFor(5);
 		}
 		target.damage(world, user.getDamageSources().playerAttack(user), shoot.damage());
+		applyHitEffects(target, shoot, user);
+	}
+
+	/** Puts the gun's effects on a mob a shot hit, unless it's the shooter or one of their pets */
+	public static void applyHitEffects(Entity target, ShootComponent shoot, @Nullable Entity shooter) {
+		if (shoot.effects().isEmpty() || !(target instanceof LivingEntity living) || !Blast.isFairGame(target, shooter)) {
+			return;
+		}
+		for (ShootComponent.HitEffect effect : shoot.effects()) {
+			// an instant effect (instant_damage, instant_health) applies on every tick it lasts, so it gets one tick
+			int ticks = effect.id().value().isInstant() ? 1 : Math.round(effect.seconds() * 20);
+			living.addStatusEffect(new StatusEffectInstance(effect.id(), ticks, effect.amplifier()), shooter);
+		}
 	}
 
 	private static void fireBullet(ServerWorld world, PlayerEntity user, ItemStack stack, ShootComponent shoot, Vec3d from) {
@@ -170,6 +184,7 @@ public class ShootAbility {
 			target.setOnFireFor(5);
 		}
 		target.damage(world, world.getDamageSources().fireworks(rocket, shooter), shoot.damage());
+		applyHitEffects(target, shoot, shooter);
 		Blast.at(world, rocket.getEntityPos(), shoot, rocket, shooter, target);
 	}
 

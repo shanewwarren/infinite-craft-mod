@@ -1,0 +1,222 @@
+package com.infinite_craft.test;
+
+import static com.infinite_craft.test.CraftedItemUseTest.example;
+import static com.infinite_craft.test.CraftedItemUseTest.floor;
+import static com.infinite_craft.test.CraftedItemUseTest.player;
+import static com.infinite_craft.test.CraftedItemUseTest.tick;
+import static com.infinite_craft.test.CraftedItemUseTest.use;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import com.infinite_craft.ability.TimedAttributes;
+import com.infinite_craft.ability.TimedAttributesConsumeEffect;
+
+import net.fabricmc.fabric.api.gametest.v1.GameTest;
+import net.minecraft.block.Blocks;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.entity.attribute.EntityAttributeModifier;
+import net.minecraft.entity.attribute.EntityAttributes;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
+import net.minecraft.test.TestContext;
+import net.minecraft.text.Text;
+import net.minecraft.util.Hand;
+import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
+
+/**
+ * A potion with the infinite_craft:attributes consume effect changes the drinker for a while: the Shrink Potion makes
+ * the player a quarter size for 30 s. It wears off on time and on death, another drink restarts the time rather than
+ * shrinking further, it's never saved, and growing back inside a low tunnel doesn't suffocate
+ */
+public class TimedAttributesTest {
+
+	static final String SHRINK_POTION = example("Shrink Potion");
+
+	private static final Identifier SHRINK = Identifier.of("infinite_craft", "timed/shrink");
+
+	/** Drinks the item in the main hand the way a player does: hold use until it's consumed */
+	static void drink(PlayerEntity player, ItemStack potion) {
+		player.setStackInHand(Hand.MAIN_HAND, potion);
+		use(player, Hand.MAIN_HAND);
+		for (int t = 0; t < 40 && player.isUsingItem(); t++) {
+			tick(player);
+		}
+	}
+
+	private static void ticks(PlayerEntity player, int count) {
+		for (int t = 0; t < count; t++) tick(player);
+	}
+
+	private static double scale(PlayerEntity player) {
+		return player.getAttributeValue(EntityAttributes.SCALE);
+	}
+
+	@GameTest(maxTicks = 20)
+	public void shrinkPotionShrinksThenWearsOff(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		drink(player, ThrustTest.parse(context, SHRINK_POTION));
+		context.assertTrue(Math.abs(scale(player) - 0.25) < 0.01, Text.literal("after drinking, scale " + scale(player)));
+		ticks(player, 30 * 20 + 5);
+		context.assertTrue(scale(player) == 1.0, Text.literal("30 s later, scale " + scale(player)));
+		context.complete();
+	}
+
+	@GameTest(maxTicks = 20)
+	public void shrinkWearsOffOnDeath(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		drink(player, ThrustTest.parse(context, SHRINK_POTION));
+		context.assertTrue(scale(player) < 1.0, Text.literal("drinking didn't shrink: scale " + scale(player)));
+		player.kill(context.getWorld());
+		context.assertTrue(scale(player) == 1.0 && !TimedAttributes.isActive(player),
+			Text.literal("after dying, scale %s, still active %s".formatted(scale(player), TimedAttributes.isActive(player))));
+		context.complete();
+	}
+
+	@GameTest(maxTicks = 20)
+	public void secondDrinkRefreshesInsteadOfStacking(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		ItemStack potions = ThrustTest.parse(context, SHRINK_POTION);
+		drink(player, potions);
+		ticks(player, 20 * 20);
+		drink(player, player.getMainHandStack());
+		context.assertTrue(Math.abs(scale(player) - 0.25) < 0.01, Text.literal("after a second drink, scale " + scale(player)));
+		ticks(player, 15 * 20);
+		context.assertTrue(Math.abs(scale(player) - 0.25) < 0.01,
+			Text.literal("15 s after the second drink (35 s after the first), scale " + scale(player)));
+		ticks(player, 15 * 20 + 5);
+		context.assertTrue(scale(player) == 1.0, Text.literal("30 s after the second drink, scale " + scale(player)));
+		context.complete();
+	}
+
+	@GameTest(maxTicks = 20)
+	public void timedModifierIsNeverPersistent(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		drink(player, ThrustTest.parse(context, SHRINK_POTION));
+		var instance = player.getAttributeInstance(EntityAttributes.SCALE);
+		context.assertTrue(instance.hasModifier(SHRINK), Text.literal("drinking put no shrink modifier on"));
+		context.assertTrue(instance.getPersistentModifiers().stream().noneMatch(m -> m.id().equals(SHRINK)),
+			Text.literal("the shrink would be saved with the player: " + instance.getPersistentModifiers()));
+		context.complete();
+	}
+
+	// three times as tall: even crawling, the head is 1.2 blocks up
+	private static final String GIANT_POTION = """
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:consumable":{consume_seconds:0.8f,on_consume_effects:[{type:"infinite_craft:attributes",seconds:10.0f,modifiers:[{type:"minecraft:scale",id:"infinite_craft:grow",amount:2.0d,operation:"add_multiplied_total"}]}]}}}""";
+
+	@GameTest(maxTicks = 20)
+	public void growingUnderALowCeilingDoesNotSuffocate(TestContext context) {
+		floor(context);
+		// a 1-block-high room, like a tunnel he dug
+		for (int x = 0; x < 8; x++) {
+			for (int z = 0; z < 8; z++) {
+				context.setBlockState(new BlockPos(x, 2, z), Blocks.STONE);
+			}
+		}
+		PlayerEntity player = player(context);
+		ticks(player, 5);
+		float before = player.getHealth();
+		drink(player, ThrustTest.parse(context, GIANT_POTION));
+		context.assertTrue(scale(player) > 2.9, Text.literal("the giant potion didn't grow: scale " + scale(player)));
+		ticks(player, 10 * 20 + 40);
+		context.assertTrue(player.getHealth() == before,
+			Text.literal("growing under the ceiling hurt: health %s to %s, pose %s".formatted(before, player.getHealth(), player.getPose())));
+		context.complete();
+	}
+
+	@GameTest(maxTicks = 20)
+	public void badSecondsAndTooManyModifiersAreClamped(TestContext context) {
+		List<TimedAttributesConsumeEffect.Modifier> nine = new ArrayList<>();
+		for (int i = 0; i < 9; i++) {
+			nine.add(new TimedAttributesConsumeEffect.Modifier(EntityAttributes.SCALE,
+				new EntityAttributeModifier(Identifier.of("infinite_craft", "m" + i), 0.1, EntityAttributeModifier.Operation.ADD_VALUE)));
+		}
+		TimedAttributesConsumeEffect effect = new TimedAttributesConsumeEffect(nine, 99999f);
+		context.assertTrue(effect.seconds() == 600 && effect.modifiers().size() == 6,
+			Text.literal("clamped to %s s and %d modifiers".formatted(effect.seconds(), effect.modifiers().size())));
+		context.assertTrue(new TimedAttributesConsumeEffect(nine, -3f).seconds() == 1, Text.literal("negative seconds not clamped to 1"));
+		// a parsed potion keeps its effect
+		ItemStack potion = ThrustTest.parse(context, SHRINK_POTION);
+		context.assertTrue(potion.get(DataComponentTypes.CONSUMABLE).onConsumeEffects().stream().anyMatch(TimedAttributesConsumeEffect.class::isInstance),
+			Text.literal("the Shrink Potion parsed without its timed attributes"));
+		context.complete();
+	}
+
+	@GameTest(maxTicks = 20, skyAccess = true)
+	public void moonBootsJumpLandsUnhurt(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		player.equipStack(EquipmentSlot.FEET, ThrustTest.parse(context, example("Moon Boots")));
+		ticks(player, 5);
+		double gravity = player.getAttributeValue(EntityAttributes.GRAVITY);
+		context.assertTrue(gravity < 0.08, Text.literal("Moon Boots left gravity at " + gravity));
+		double ground = player.getY();
+		float health = player.getHealth();
+		double peak = ground;
+		for (int t = 0; t < 200; t++) {
+			player.setJumping(t < 2);
+			tick(player);
+			peak = Math.max(peak, player.getY());
+			if (t > 5 && player.isOnGround()) break;
+		}
+		context.assertTrue(peak - ground >= 2, Text.literal("Moon Boots jumped only %.2f blocks (a plain jump is about 1.25)".formatted(peak - ground)));
+		context.assertTrue(player.isOnGround() && player.getHealth() == health,
+			Text.literal("after a %.1f-block moon jump: on ground %s, health %s to %s".formatted(peak - ground, player.isOnGround(), health, player.getHealth())));
+		context.complete();
+	}
+
+	// one id on two attributes: vanilla allows it, since ids only need to be unique within an attribute
+	private static final String GIANT_STEPS_POTION = """
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:consumable":{consume_seconds:0.8f,on_consume_effects:[{type:"infinite_craft:attributes",seconds:2.0f,modifiers:[{type:"minecraft:scale",id:"infinite_craft:giant",amount:2.0d,operation:"add_multiplied_total"},{type:"minecraft:step_height",id:"infinite_craft:giant",amount:1.0d,operation:"add_value"}]}]}}}""";
+
+	@GameTest(maxTicks = 20, skyAccess = true)
+	public void sameIdOnTwoAttributesBothWearOff(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		double step = player.getAttributeValue(EntityAttributes.STEP_HEIGHT);
+		drink(player, ThrustTest.parse(context, GIANT_STEPS_POTION));
+		context.assertTrue(scale(player) > 2.9 && player.getAttributeValue(EntityAttributes.STEP_HEIGHT) > step,
+			Text.literal("the potion didn't apply both: scale %s, step %s".formatted(scale(player), player.getAttributeValue(EntityAttributes.STEP_HEIGHT))));
+		ticks(player, 2 * 20 + 5);
+		context.assertTrue(scale(player) == 1.0 && player.getAttributeValue(EntityAttributes.STEP_HEIGHT) == step,
+			Text.literal("after it wore off: scale %s, step %s".formatted(scale(player), player.getAttributeValue(EntityAttributes.STEP_HEIGHT))));
+		context.complete();
+	}
+
+	@GameTest(maxTicks = 20)
+	public void respawnedPlayerStartsClean(TestContext context) {
+		floor(context);
+		PlayerEntity before = player(context);
+		drink(before, ThrustTest.parse(context, SHRINK_POTION));
+		// a respawn (like leaving the End) makes a new player that keeps the old one's network id
+		PlayerEntity after = player(context);
+		after.setId(before.getId());
+		context.assertTrue(!TimedAttributes.isActive(after), Text.literal("the respawned player inherited the old one's timed attributes"));
+		context.complete();
+	}
+
+	// Claude copies example ids, so a potion can reuse the id a worn item's modifier has
+	private static final String MOON_JUICE = """
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:consumable":{consume_seconds:0.8f,on_consume_effects:[{type:"infinite_craft:attributes",seconds:2.0f,modifiers:[{type:"minecraft:gravity",id:"infinite_craft:moon_gravity",amount:-0.5d,operation:"add_multiplied_base"}]}]}}}""";
+
+	@GameTest(maxTicks = 20)
+	public void potionDoesNotBreakWornBoots(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		player.equipStack(EquipmentSlot.FEET, ThrustTest.parse(context, example("Moon Boots")));
+		ticks(player, 5);
+		double boots = player.getAttributeValue(EntityAttributes.GRAVITY);
+		drink(player, ThrustTest.parse(context, MOON_JUICE));
+		ticks(player, 2 * 20 + 5);
+		double after = player.getAttributeValue(EntityAttributes.GRAVITY);
+		context.assertTrue(Math.abs(after - boots) < 1e-6,
+			Text.literal("after the potion wore off, the boots' gravity is %.4f, was %.4f".formatted(after, boots)));
+		context.complete();
+	}
+}

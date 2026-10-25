@@ -16,6 +16,7 @@ import com.infinite_craft.InfiniteItem;
 import com.infinite_craft.ability.Abilities;
 import com.infinite_craft.ability.AuraComponent;
 import com.infinite_craft.ability.ShootComponent;
+import com.infinite_craft.ability.TimedAttributesConsumeEffect;
 import com.infinite_craft.ai.AiPrompt;
 import com.infinite_craft.process.InfiniteCraftProcess;
 import com.infinite_craft.vehicle.VehicleEntity;
@@ -84,6 +85,12 @@ public class CraftedItemUseTest {
 			fixtures.add(new Fixture("prompt example " + (i + 1), AiPrompt.POWER_EXAMPLES.get(i).strip()));
 		}
 		useAll(context, fixtures, "the prompt's examples", "prompt-examples.md");
+	}
+
+	// a potion whose only effect is timed attributes (no status effect to see) still counts as working
+	@GameTest(maxTicks = 20)
+	public void timedAttributePotionDoesSomething(TestContext context) {
+		useAll(context, List.of(new Fixture("shrink potion", TimedAttributesTest.SHRINK_POTION.strip())), "TimedAttributesTest", "timed-attributes.md");
 	}
 
 	@GameTest(maxTicks = 20, required = false, skyAccess = true)
@@ -164,6 +171,12 @@ public class CraftedItemUseTest {
 		player.setStackInHand(Hand.MAIN_HAND, stack.copy());
 		Vec3d start = player.getEntityPos();
 		int countBefore = stack.getCount();
+		Map<RegistryEntry<EntityAttribute>, Double> attributesBefore = new LinkedHashMap<>();
+		for (ConsumeEffect effect : consumable.onConsumeEffects()) {
+			if (effect instanceof TimedAttributesConsumeEffect timed) {
+				timed.modifiers().forEach(m -> attributesBefore.putIfAbsent(m.type(), player.getAttributeValue(m.type())));
+			}
+		}
 
 		use(player, Hand.MAIN_HAND);
 		for (int t = 0; t < consumable.consumeSeconds() * 20 + 10 && player.isUsingItem(); t++) {
@@ -195,6 +208,10 @@ public class CraftedItemUseTest {
 				(moved > 1 ? seen : missing).add("teleport (moved %.1f%s)".formatted(moved, tries > 1 ? " after " + tries + " tries" : ""));
 			}
 		}
+		attributesBefore.forEach((attribute, before) -> {
+			double after = player.getAttributeValue(attribute);
+			(after != before ? seen : missing).add("%s %.2f → %.2f".formatted(attribute.getIdAsString().replace("minecraft:", ""), before, after));
+		});
 		if (stack.contains(DataComponentTypes.FOOD)) {
 			(player.getHungerManager().getFoodLevel() > 4 ? seen : missing).add("food");
 		}
@@ -477,6 +494,12 @@ public class CraftedItemUseTest {
 				context.setBlockState(new BlockPos(x, 0, z), Blocks.STONE);
 			}
 		}
+	}
+
+	/** The prompt's own example with this name, so what Claude is shown is what's tested */
+	static String example(String name) {
+		return AiPrompt.POWER_EXAMPLES.stream().filter(e -> e.contains("\"" + name + "\"")).findFirst()
+			.orElseThrow(() -> new IllegalStateException("no prompt example named " + name)).strip();
 	}
 
 	/** A survival player standing on the test floor, looking at where dummies spawn */
