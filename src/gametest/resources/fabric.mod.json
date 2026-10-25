@@ -13,7 +13,8 @@
 			"com.infinite_craft.test.LaunchTest",
 			"com.infinite_craft.test.DashTest",
 			"com.infinite_craft.test.AuraTest",
-			"com.infinite_craft.test.VehicleTest"
+			"com.infinite_craft.test.VehicleTest",
+			"com.infinite_craft.test.CraftHandoffTest"
 		],
 		"fabric-client-gametest": [
 			"com.infinite_craft.test.ShootClientGameTest",
