@@ -6,17 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import com.infinite_craft.InfiniteItem;
-import com.infinite_craft.ability.Abilities;
+import com.infinite_craft.TestBootstrap;
 import com.infinite_craft.ai.AiPrompt;
-import com.infinite_craft.element.ElementItems;
 
-import net.minecraft.Bootstrap;
-import net.minecraft.SharedConstants;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.StringNbtReader;
-import net.minecraft.registry.BuiltinRegistries;
 import net.minecraft.registry.RegistryWrapper;
 
 /** The ruler for "these two items play the same": what an item does, ignoring its name, looks and numbers */
@@ -26,12 +21,7 @@ public class BehaviorSignatureTest {
 
 	@BeforeAll
 	static void bootstrap() {
-		SharedConstants.createGameVersion();
-		Bootstrap.initialize();
-		Abilities.initialize();
-		InfiniteItem.initialize();
-		ElementItems.initialize();
-		registries = BuiltinRegistries.createWrapperLookup();
+		registries = TestBootstrap.registries();
 	}
 
 	private static final String PLASMA_BLASTER = """
@@ -69,10 +59,24 @@ public class BehaviorSignatureTest {
 
 	@Test
 	void swordsOfDifferentMaterialMatch() {
-		assertEquals("base(sword) + enchantments(sharpness)", of("""
-			{id:"minecraft:diamond_sword",count:1i,components:{"minecraft:enchantments":{"minecraft:sharpness":3}}}"""));
-		assertEquals("base(sword) + enchantments(sharpness)", of("""
-			{id:"minecraft:iron_sword",count:1i,components:{"minecraft:enchantments":{"minecraft:sharpness":1}}}"""));
+		assertEquals("base(sword) + enchantments(fire_aspect)", of("""
+			{id:"minecraft:diamond_sword",count:1i,components:{"minecraft:enchantments":{"minecraft:fire_aspect":2,"minecraft:sharpness":3}}}"""));
+		assertEquals("base(sword) + enchantments(fire_aspect)", of("""
+			{id:"minecraft:iron_sword",count:1i,components:{"minecraft:enchantments":{"minecraft:fire_aspect":1}}}"""));
+	}
+
+	@Test
+	void statsDontCount() {
+		// more armor, a faster swing or sharpness changes numbers, not what the item does
+		assertEquals("base(chestplate)", of("""
+			{id:"minecraft:diamond_chestplate",count:1i,components:{"minecraft:enchantments":{"minecraft:protection":4,"minecraft:unbreaking":3},"minecraft:attribute_modifiers":[{type:"minecraft:armor",id:"infinite_craft:a",amount:10.0d,operation:"add_value",slot:"chest"},{type:"minecraft:armor_toughness",id:"infinite_craft:b",amount:3.0d,operation:"add_value",slot:"chest"}]}}"""));
+		assertEquals("base(sword)", of("""
+			{id:"minecraft:iron_sword",count:1i,components:{"minecraft:enchantments":{"minecraft:sharpness":5},"minecraft:attribute_modifiers":[{type:"minecraft:attack_damage",id:"infinite_craft:a",amount:9.0d,operation:"add_value",slot:"mainhand"},{type:"minecraft:attack_speed",id:"infinite_craft:b",amount:-2.0d,operation:"add_value",slot:"mainhand"}]}}"""));
+	}
+
+	@Test
+	void meleeWeaponsSayMelee() {
+		assertEquals("melee", of(example("Green Lightsaber")));
 	}
 
 	@Test

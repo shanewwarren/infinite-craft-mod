@@ -1,0 +1,24 @@
+diamond + diamond + stick: attributes(attack_knockback,entity_interaction_range) + base(sword)
+ender pearl + feather: consumable(slow_falling,teleport)
+slime ball + iron boots: attributes(jump_strength) + base(boots) + dash
+bow + blaze rod + arrow: base(bow) + damage_resistant + enchantments(flame) + shoot(bullet,fire)
+cake + golden apple: consumable(absorption,regeneration,saturation) + food
+pufferfish + trident: melee + shoot(bullet)
+tnt (break down): 
+vanillaify + netherite ingot + feather: 
+element fire + iron sword: aura(fire_resistance) + base(sword) + damage_resistant + enchantments(fire_aspect)
+wish: Prime Energy Drink: consumable(haste,jump_boost,speed,strength) + food
+wish: Jetpack: thrust + wear(chest)
+wish: Blue Lightsaber: melee + shoot(beam)
+wish: Ray Gun: shoot(beam)
+wish: Disc Saw: melee + tool
+wish: Mega Puncher: launch + melee
+wish: Nail Gun: shoot(bullet)
+wish: Chain Gun: shoot(bullet)
+wish: Rocket Launcher: shoot(rocket,explode)
+wish: Thor's Hammer: base(mace) + damage_resistant + enchantments(wind_burst) + launch + shoot(beam,lightning)
+wish: Dash Boots: attributes(movement_speed) + base(boots) + dash
+wish: Steam Armor: aura(fire_resistance) + base(chestplate) + thrust
+wish: God Armor: attributes(max_health,movement_speed) + aura(absorption,fire_resistance,regeneration,resistance,strength) + base(chestplate) + damage_resistant + enchantments(thorns)
+wish: Tank: shoot(rocket,explode) + vehicle(tank)
+wish: Race Car: vehicle(car)

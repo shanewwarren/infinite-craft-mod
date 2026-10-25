@@ -88,6 +88,7 @@ A short string that says what an item **does**, ignoring its name, lore and mode
 
 - the mod abilities on it, each with the fields that change how it plays bucketed coarsely: `shoot` by kind, plus the explode, lightning and fire flags and its on-hit effect ids (Part B); `vehicle` by body; `summon` by mob type; `grapple` by `pull_mobs` and a short/long range bucket; `build` by size bucket (small, medium, large) and shape (tall, wide, long and flat) and whether it carves; `launch`, `dash`, `thrust` and `aura` by name plus aura effect ids;
 - the vanilla functional components (consumable effect ids, attribute types, tool, glider, death protection, equippable slot).
+- *(Builder's call, while pinning the baseline:)* stats don't count. Armor, toughness, attack damage and speed, knockback resistance, safe fall distance and stat enchantments (sharpness, protection, unbreaking and the like) are left out, since a kid sees them as the same item with bigger numbers. A custom item that hits things gets a `melee` token instead. Without this, Dash Boots and Bouncy Boots differed only by their armor numbers.
 
 Numbers like damage 6 vs. 7 don't change the signature. "Plasma Blaster" and "Laser Pistol", both a plain beam, get the same one; a "Freeze Ray" whose beam puts slowness on what it hits (Part B) gets a different one.
 

@@ -17,8 +17,8 @@ import net.minecraft.nbt.StringNbtReader;
 import net.minecraft.registry.RegistryWrapper;
 
 /**
- * What an item does, ignoring its name, lore, looks and numbers: two items with the same signature play the same.
- * E.g. `shoot(beam)` for any plain beam gun, `base(sword) + enchantments(sharpness)` for any sharp sword.
+ * What an item does, ignoring its name, lore, looks, numbers and stats: two items with the same signature play the same.
+ * E.g. `shoot(beam)` for any plain beam gun, `base(sword) + enchantments(fire_aspect)` for any flaming sword, however sharp.
  * The eval's variety score, the playtest log and its report all use it, so it's the ruler for sameness:
  * new abilities add tokens for their own fields, but the tokens below never change, or old scores stop comparing
  * (ClaudeCraftEval.baselineVarietyIsPinned checks that)
@@ -28,6 +28,14 @@ public class BehaviorSignature {
 	private static final List<String> MATERIALS = List.of("wooden_", "stone_", "iron_", "golden_", "diamond_", "netherite_",
 		"copper_", "leather_", "chainmail_");
 
+	// Stats: bigger numbers, not a different thing to do. A new attribute or enchantment counts unless it's listed here
+	private static final Set<String> STAT_ATTRIBUTES = Set.of("armor", "armor_toughness", "attack_damage", "attack_speed",
+		"knockback_resistance", "explosion_knockback_resistance", "safe_fall_distance", "fall_damage_multiplier", "luck", "max_absorption");
+
+	private static final Set<String> STAT_ENCHANTMENTS = Set.of("sharpness", "smite", "bane_of_arthropods", "power", "protection",
+		"fire_protection", "blast_protection", "projectile_protection", "feather_falling", "unbreaking", "mending", "efficiency",
+		"density", "breach", "impaling", "sweeping_edge", "luck_of_the_sea", "lure");
+
 	private static final Set<String> FLAGS = Set.of("tool", "glider", "death_protection", "blocks_attacks", "damage_resistant");
 
 	/** The item as NBT: {id, count, components}. "" for a plain vanilla item, which only does what that item does */
@@ -36,7 +44,8 @@ public class BehaviorSignature {
 		if (components.isEmpty()) return "";
 		Set<String> tokens = new TreeSet<>();
 		String id = item.getString("id").orElse("");
-		if (!id.equals("infinite_craft:custom_crafted_item")) {
+		boolean custom = id.equals("infinite_craft:custom_crafted_item");
+		if (!custom) {
 			tokens.add("base(" + material(shortId(id)) + ")");
 		}
 		components.getCompound("infinite_craft:shoot").ifPresent(shoot -> {
@@ -69,14 +78,21 @@ public class BehaviorSignature {
 		// a plain list, or the older {modifiers:[...]}
 		Optional<NbtList> modifiers = components.getList("minecraft:attribute_modifiers")
 			.or(() -> components.getCompound("minecraft:attribute_modifiers").flatMap(c -> c.getList("modifiers")));
-		modifiers.ifPresent(list -> tokens.add(group("attributes",
-			compounds(Optional.of(list)).stream().map(m -> shortId(m.getString("type").orElse(""))).collect(Collectors.toCollection(TreeSet::new)))));
+		modifiers.ifPresent(list -> {
+			Set<String> types = compounds(Optional.of(list)).stream().map(m -> shortId(m.getString("type").orElse("")))
+				.collect(Collectors.toCollection(TreeSet::new));
+			// how hard it hits is a stat, but that a custom item is for hitting things isn't (a vanilla base says so already)
+			if (custom && types.contains("attack_damage")) tokens.add("melee");
+			types.removeAll(STAT_ATTRIBUTES);
+			if (!types.isEmpty()) tokens.add(group("attributes", types));
+		});
+		if (custom && components.contains("minecraft:weapon")) tokens.add("melee");
 		// ids straight to levels, or the older {levels:{...}}
 		components.getCompound("minecraft:enchantments").ifPresent(enchantments -> {
 			NbtCompound levels = enchantments.getCompound("levels").orElse(enchantments);
-			if (!levels.isEmpty()) {
-				tokens.add(group("enchantments", levels.getKeys().stream().map(BehaviorSignature::shortId).collect(Collectors.toCollection(TreeSet::new))));
-			}
+			Set<String> effects = levels.getKeys().stream().map(BehaviorSignature::shortId)
+				.filter(e -> !STAT_ENCHANTMENTS.contains(e)).collect(Collectors.toCollection(TreeSet::new));
+			if (!effects.isEmpty()) tokens.add(group("enchantments", effects));
 		});
 		components.getCompound("minecraft:equippable").ifPresent(equippable -> tokens.add("wear(" + equippable.getString("slot").orElse("head") + ")"));
 		for (String flag : FLAGS) {
