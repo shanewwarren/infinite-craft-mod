@@ -3,6 +3,8 @@ package com.infinite_craft.playtest;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import com.infinite_craft.ability.Abilities;
+
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -27,7 +29,10 @@ public class Playtest {
 
 	public static void initialize() {
 		UseItemCallback.EVENT.register((player, world, hand) -> log(player, world, hand, "use"));
-		UseBlockCallback.EVENT.register((player, world, hand, hit) -> log(player, world, hand, "use"));
+		// only vehicles act on a block (placing them); anything else right-clicked at a block either opens the door or
+		// chest there, or falls through to UseItemCallback, which counts it
+		UseBlockCallback.EVENT.register((player, world, hand, hit) ->
+			player.getStackInHand(hand).contains(Abilities.VEHICLE) ? log(player, world, hand, "use") : ActionResult.PASS);
 		AttackEntityCallback.EVENT.register((player, world, hand, entity, hit) -> log(player, world, hand, "hit"));
 		ServerEntityEvents.EQUIPMENT_CHANGE.register((entity, slot, previous, next) -> {
 			// put on, not just worn down: armor taking damage changes the stack too

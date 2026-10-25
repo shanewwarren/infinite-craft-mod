@@ -35,7 +35,6 @@ public class CraftResults {
 		ItemStack stamped = result.copy();
 		String id = CraftId.stampIfCustom(stamped).orElse(null);
 		boolean present = player != null && player.isAlive();
-		CraftHandoff.Placed first = null;
 		for (int i = 0; i < copies; i++) {
 			ItemStack copy = stamped.copy();
 			if (present) {
@@ -48,13 +47,12 @@ public class CraftResults {
 					((PlayerEntityExt) player).getDiscoveringData().add(element);
 					GlobalDiscoveringDataManager.get(world.getServer()).getDiscovered().add(element);
 				}
-				CraftHandoff.Placed placed = CraftHandoff.give(player, copy);
-				if (first == null) first = placed;
 			} else {
 				world.spawnEntity(new ItemEntity(world, table.getX() + 0.5, table.getY() + 1, table.getZ() + 0.5, copy));
 			}
 		}
-		if (first != null) {
+		if (present) {
+			CraftHandoff.Placed first = CraftHandoff.give(player, stamped, copies);
 			CraftHandoff.announce(player, stamped, first);
 		}
 

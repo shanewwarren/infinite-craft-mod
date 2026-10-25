@@ -24,7 +24,22 @@ public class CraftHandoff {
 	/** Where the stack went first; slot is -1 when it was dropped */
 	public record Placed(Where where, int slot) {}
 
+	/** Several copies of one result, e.g. from two of each ingredient; returns where the first went */
+	public static Placed give(PlayerEntity player, ItemStack stack, int copies) {
+		Placed first = null;
+		for (int i = 0; i < copies; i++) {
+			// only the first copy may change the selected slot: announce tells the client that one
+			Placed placed = give(player, stack.copy(), i == 0);
+			if (first == null) first = placed;
+		}
+		return first;
+	}
+
 	public static Placed give(PlayerEntity player, ItemStack stack) {
+		return give(player, stack, true);
+	}
+
+	private static Placed give(PlayerEntity player, ItemStack stack, boolean select) {
 		PlayerInventory inventory = player.getInventory();
 		int selected = inventory.getSelectedSlot();
 		Placed placed = null;
@@ -42,7 +57,7 @@ public class CraftHandoff {
 				}
 			}
 		}
-		if (placed != null && placed.where() == Where.HOTBAR) {
+		if (select && placed != null && placed.where() == Where.HOTBAR) {
 			inventory.setSelectedSlot(placed.slot());
 		}
 		if (!stack.isEmpty()) {

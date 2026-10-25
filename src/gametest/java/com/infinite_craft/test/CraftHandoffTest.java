@@ -103,6 +103,17 @@ public class CraftHandoffTest {
 	}
 
 	@GameTest
+	public void secondUnstackableCopyKeepsTheFirstSelected(TestContext context) {
+		// two of each ingredient give two guns: the first in hand, the second beside it, and the hand stays on the first
+		PlayerEntity player = CraftedItemUseTest.player(context);
+		CraftHandoff.Placed placed = CraftHandoff.give(player, rayGun(context), 2);
+		context.assertEquals(new CraftHandoff.Placed(CraftHandoff.Where.SELECTED, 0), placed, Text.literal("placed"));
+		context.assertEquals(0, player.getInventory().getSelectedSlot(), Text.literal("selected slot"));
+		context.assertTrue(player.getInventory().getStack(1).isOf(rayGun(context).getItem()), Text.literal("the second gun isn't in slot 1"));
+		context.complete();
+	}
+
+	@GameTest
 	public void cursorStackIsUntouched(TestContext context) {
 		PlayerEntity player = CraftedItemUseTest.player(context);
 		player.currentScreenHandler.setCursorStack(new ItemStack(Items.DIRT, 3));

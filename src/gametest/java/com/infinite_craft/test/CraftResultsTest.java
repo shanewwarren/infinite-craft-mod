@@ -6,18 +6,25 @@ import java.util.function.Consumer;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.infinite_craft.ai.AiPrompt;
 import com.infinite_craft.playtest.CraftId;
 import com.infinite_craft.playtest.CraftResults;
 import com.infinite_craft.playtest.PlaytestLog;
 
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.entity.ItemEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.test.TestContext;
 import net.minecraft.text.Text;
+import net.minecraft.util.Hand;
+import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Vec3d;
 
 /**
  * Every finished craft goes through CraftResults: it's stamped, handed over (or dropped at the table when the
@@ -78,6 +85,44 @@ public class CraftResultsTest {
 			Text.literal("the copies differ"));
 		context.assertEquals(crafts.get(0).get("id").getAsString(), CraftId.of(items.get(0).getStack()).orElse("none"),
 			Text.literal("the dropped copy's id"));
+		context.complete();
+	}
+
+	/** What the server runs when a player right-clicks a block with the stack in hand */
+	private static List<JsonObject> rightClickBlock(TestContext context, ItemStack stack) {
+		List<String> lines = new ArrayList<>();
+		Consumer<String> original = PlaytestLog.sink;
+		PlaytestLog.sink = lines::add;
+		PlaytestLog.reset();
+		try {
+			PlayerEntity player = CraftedItemUseTest.player(context);
+			player.setStackInHand(Hand.MAIN_HAND, stack);
+			BlockPos floor = context.getAbsolutePos(new BlockPos(4, 0, 4));
+			UseBlockCallback.EVENT.invoker().interact(player, context.getWorld(), Hand.MAIN_HAND,
+				new BlockHitResult(Vec3d.ofCenter(floor), Direction.UP, floor, false));
+		} finally {
+			PlaytestLog.sink = original;
+		}
+		return lines.stream().map(l -> JsonParser.parseString(l.substring(PlaytestLog.TAG.length())).getAsJsonObject()).toList();
+	}
+
+	@GameTest
+	public void openingADoorIsNotUsingTheSword(TestContext context) {
+		CraftedItemUseTest.floor(context);
+		ItemStack sword = ThrustTest.parse(context, "{id:\"minecraft:iron_sword\",count:1i,components:{\"minecraft:item_name\":\"Big Sword\"}}");
+		CraftId.stampIfCustom(sword);
+		context.assertTrue(rightClickBlock(context, sword).isEmpty(), Text.literal("right-clicking a block counted as using a sword"));
+		context.complete();
+	}
+
+	@GameTest
+	public void placingAVehicleIsUsingIt(TestContext context) {
+		CraftedItemUseTest.floor(context);
+		ItemStack tank = ThrustTest.parse(context, AiPrompt.POWER_EXAMPLES.stream().filter(e -> e.contains("infinite_craft:vehicle")).findFirst().orElseThrow());
+		String id = CraftId.stampIfCustom(tank).orElseThrow();
+		List<JsonObject> lines = rightClickBlock(context, tank);
+		context.assertTrue(lines.size() == 1 && lines.get(0).get("id").getAsString().equals(id) && lines.get(0).get("kind").getAsString().equals("use"),
+			Text.literal("placing a tank logged " + lines));
 		context.complete();
 	}
 

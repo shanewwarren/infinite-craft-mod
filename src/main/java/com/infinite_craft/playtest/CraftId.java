@@ -26,8 +26,12 @@ public class CraftId {
 		ComponentType.<String>builder().codec(Codec.STRING).build()
 	);
 
-	/** Stamps a new id on a custom result (anything beyond its base item's defaults) and returns it */
+	/**
+	 * Stamps a new id on a custom result (anything beyond its base item's defaults) and returns it.
+	 * An id already on the stack, e.g. copied by Claude from a crafted ingredient, is removed first
+	 */
 	public static Optional<String> stampIfCustom(ItemStack stack) {
+		stack.remove(TYPE);
 		if (stack.isEmpty() || ElementData.isElement(stack) || stack.getComponentChanges().isEmpty()) return Optional.empty();
 		String id = "%08x".formatted(ThreadLocalRandom.current().nextInt());
 		stack.set(TYPE, id);

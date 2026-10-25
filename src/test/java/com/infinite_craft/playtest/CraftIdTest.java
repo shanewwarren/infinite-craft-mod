@@ -49,6 +49,28 @@ public class CraftIdTest {
 	}
 
 	@Test
+	void anEchoedIdDoesNotMakePlainItemsCustom() {
+		// Claude may copy an ingredient's craft_id onto a breakdown's gunpowder; that's still plain gunpowder
+		ItemStack gunpowder = new ItemStack(Items.GUNPOWDER, 5);
+		gunpowder.set(CraftId.TYPE, "echoed00");
+		assertEquals(Optional.empty(), CraftId.stampIfCustom(gunpowder));
+		assertEquals(Optional.empty(), CraftId.of(gunpowder));
+		assertTrue(ItemStack.areItemsAndComponentsEqual(gunpowder, new ItemStack(Items.GUNPOWDER)));
+	}
+
+	@Test
+	void promptsNeverShowTheId() throws Exception {
+		com.infinite_craft.InfiniteCraftConfig config = new com.infinite_craft.InfiniteCraftConfig();
+		com.infinite_craft.InfiniteCraft.config = config;
+		String rayGun = AiPrompt.POWER_EXAMPLES.stream().filter(e -> e.contains("Laser Blaster")).findFirst().orElseThrow().strip();
+		ItemStack stack = ItemStack.CODEC.parse(registries.getOps(NbtOps.INSTANCE), StringNbtReader.readCompound(rayGun)).getOrThrow();
+		CraftId.stampIfCustom(stack);
+		String prompt = AiPrompt.GeneratePrompt(new java.util.ArrayList<>(java.util.List.of(stack, new ItemStack(Items.TNT))), 3);
+		assertTrue(prompt.contains("Laser Blaster"), "the ingredient is missing from the prompt");
+		assertTrue(!prompt.contains("craft_id"), "the hidden craft id reached the prompt");
+	}
+
+	@Test
 	void elementsAreNotStamped() {
 		ItemStack fire = ElementItems.ELEMENT_FIRE.getDefaultStack();
 		assertEquals(Optional.empty(), CraftId.stampIfCustom(fire));

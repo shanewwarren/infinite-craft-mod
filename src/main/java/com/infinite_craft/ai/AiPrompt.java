@@ -13,6 +13,7 @@ import com.google.gson.JsonParser;
 import com.infinite_craft.InfiniteCraft;
 import com.infinite_craft.InfiniteItem;
 import com.infinite_craft.element.ElementData;
+import com.infinite_craft.playtest.CraftId;
 
 import net.minecraft.SharedConstants;
 import net.minecraft.item.ItemStack;
@@ -84,7 +85,10 @@ public class AiPrompt {
 				if(ElementData.isElement(stack)){
 					itemDesc="Element " + ElementData.fromItem(stack).orElseThrow().toString();
 				} else {
-					NbtCompound nbt = ItemStack.CODEC.encodeStart(NbtOps.INSTANCE, stack)
+					// the playtest's hidden id means nothing to Claude, and it might copy it onto the result
+					ItemStack described = stack.copy();
+					described.remove(CraftId.TYPE);
+					NbtCompound nbt = ItemStack.CODEC.encodeStart(NbtOps.INSTANCE, described)
 						.resultOrPartial(error -> {})
 						.map(nbtElement -> (NbtCompound) nbtElement)
 						.orElseThrow();
