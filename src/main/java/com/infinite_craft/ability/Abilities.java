@@ -64,6 +64,7 @@ public class Abilities {
 		CraftId.initialize();
 		LaunchAbility.initialize();
 		Blast.initialize();
+		TimedAttributes.initialize();
 		Vehicles.initialize();
 	}
 }

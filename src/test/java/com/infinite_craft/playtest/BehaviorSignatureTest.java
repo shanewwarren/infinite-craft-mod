@@ -115,4 +115,19 @@ public class BehaviorSignatureTest {
 		assertEquals(of(tank), BehaviorSignature.of(stack, registries));
 		assertEquals("shoot(rocket,explode) + vehicle(tank)", of(tank));
 	}
+
+	private static final String SHRINK_POTION = """
+		{id:"infinite_craft:custom_crafted_item",count:3i,components:{"minecraft:consumable":{consume_seconds:0.8f,on_consume_effects:[{type:"infinite_craft:attributes",seconds:30.0f,modifiers:[{type:"minecraft:scale",id:"infinite_craft:shrink",amount:-0.75d,operation:"add_multiplied_total"}]}]}}}""";
+
+	@Test
+	void shrinkPotionIsTimedScale() {
+		assertEquals("consumable(timed_scale)", of(SHRINK_POTION));
+	}
+
+	@Test
+	void timedStatsDontCount() {
+		// a potion of bigger numbers is still just a drink
+		assertEquals("consumable", of("""
+			{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:consumable":{on_consume_effects:[{type:"infinite_craft:attributes",modifiers:[{type:"minecraft:armor",id:"infinite_craft:a",amount:4.0d,operation:"add_value"}]}]}}}"""));
+	}
 }

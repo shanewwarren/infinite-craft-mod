@@ -10,7 +10,8 @@
 		"PersistentProjectileEntityMixin",
 		"FireworkRocketEntityMixin",
 		"ServerPlayNetworkHandlerMixin",
-		"ServerPlayerEntityMixin"
+		"ServerPlayerEntityMixin",
+		"LivingEntityMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

@@ -69,6 +69,10 @@ public class BehaviorSignature {
 					case "teleport_randomly" -> parts.add("teleport");
 					case "clear_all_effects" -> parts.add("clear_effects");
 					case "remove_effects" -> parts.add("remove_effects");
+					// Part B: a potion that changes you for a while, e.g. timed_scale for a Shrink Potion
+					case "infinite_craft:attributes" -> compounds(effect.getList("modifiers")).stream()
+						.map(m -> shortId(m.getString("type").orElse(""))).filter(t -> !t.isEmpty() && !STAT_ATTRIBUTES.contains(t))
+						.forEach(t -> parts.add("timed_" + t));
 					default -> {}
 				}
 			}
