@@ -2,6 +2,7 @@ package com.infinite_craft.playtest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -129,5 +130,15 @@ public class BehaviorSignatureTest {
 		// a potion of bigger numbers is still just a drink
 		assertEquals("consumable", of("""
 			{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:consumable":{on_consume_effects:[{type:"infinite_craft:attributes",modifiers:[{type:"minecraft:armor",id:"infinite_craft:a",amount:4.0d,operation:"add_value"}]}]}}}"""));
+	}
+
+	@Test
+	void slownessBeamDiffersFromPlainBeam() {
+		String freezeRay = """
+			{id:"infinite_craft:custom_crafted_item",count:1i,components:{"infinite_craft:shoot":{kind:"beam",damage:2.0f,effects:[{id:"minecraft:slowness",amplifier:3,seconds:6.0f}]}}}""";
+		assertEquals("shoot(beam,hit_slowness)", of(freezeRay));
+		assertNotEquals(of(freezeRay), of(PLASMA_BLASTER));
+		assertEquals("shoot(bullet,fire,hit_poison,hit_slowness)", of("""
+			{id:"infinite_craft:custom_crafted_item",count:1i,components:{"infinite_craft:shoot":{kind:"bullet",fire:1b,effects:[{id:"minecraft:slowness"},{id:"minecraft:poison"}]}}}"""));
 	}
 }

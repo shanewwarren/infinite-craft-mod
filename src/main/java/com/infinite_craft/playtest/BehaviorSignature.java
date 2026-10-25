@@ -54,6 +54,8 @@ public class BehaviorSignature {
 			if (kind.equals("rocket") || shoot.getFloat("explode").orElse(0f) > 0) token.append(",explode");
 			if (shoot.getBoolean("lightning").orElse(false)) token.append(",lightning");
 			if (shoot.getBoolean("fire").orElse(false)) token.append(",fire");
+			// Part B: what a hit puts on a mob, e.g. shoot(beam,hit_slowness) for a freeze ray
+			ids(shoot.getList("effects")).forEach(effect -> token.append(",hit_").append(effect));
 			tokens.add(token.append(")").toString());
 		});
 		components.getCompound("infinite_craft:vehicle").ifPresent(vehicle -> tokens.add("vehicle(" + vehicle.getString("body").orElse("tank") + ")"));
