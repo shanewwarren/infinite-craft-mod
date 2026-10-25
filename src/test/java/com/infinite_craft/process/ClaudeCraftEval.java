@@ -88,7 +88,16 @@ public class ClaudeCraftEval {
 			new Recipe("wish: Steam Armor", List.of(named(Items.IRON_CHESTPLATE, "Steam Armor"), new ItemStack(Items.WATER_BUCKET))),
 			new Recipe("wish: God Armor", List.of(named(Items.DIAMOND_CHESTPLATE, "God Armor"), new ItemStack(Items.GOLDEN_APPLE))),
 			new Recipe("wish: Tank", List.of(named(Items.IRON_BLOCK, "Tank"), new ItemStack(Items.TNT))),
-			new Recipe("wish: Race Car", List.of(named(Items.MINECART, "Race Car"), new ItemStack(Items.REDSTONE)))
+			new Recipe("wish: Race Car", List.of(named(Items.MINECART, "Race Car"), new ItemStack(Items.REDSTONE))),
+			// Part B: several wishes per category, so the eval can show sameness within one
+			new Recipe("wish: Freeze Ray", List.of(named(Items.DIAMOND, "Freeze Ray"), new ItemStack(Items.SNOWBALL))),
+			new Recipe("wish: Poison Dart Gun", List.of(named(Items.STICK, "Poison Dart Gun"), new ItemStack(Items.SPIDER_EYE))),
+			new Recipe("wish: Moon Boots", List.of(named(Items.IRON_BOOTS, "Moon Boots"), new ItemStack(Items.END_STONE))),
+			new Recipe("wish: Spider Gloves", List.of(named(Items.LEATHER, "Spider Gloves"), new ItemStack(Items.STRING))),
+			new Recipe("wish: Fish Gills", List.of(named(Items.LEATHER_HELMET, "Fish Gills"), new ItemStack(Items.PUFFERFISH))),
+			new Recipe("wish: Long Arms", List.of(named(Items.STICK, "Long Arms"), new ItemStack(Items.PISTON))),
+			new Recipe("wish: Shrink Potion", List.of(named(Items.GLASS_BOTTLE, "Shrink Potion"), new ItemStack(Items.RED_MUSHROOM))),
+			new Recipe("wish: Giant Potion", List.of(named(Items.GLASS_BOTTLE, "Giant Potion"), new ItemStack(Items.GOLDEN_APPLE)))
 		);
 	}
 
@@ -137,6 +146,33 @@ public class ClaudeCraftEval {
 			s.contains("explode") || s.getString("kind").orElse("").equals("rocket")
 				? " explode " + s.get("explode") + (destroys ? " (breaks blocks)" : "") : "",
 			s.getBoolean("lightning").orElse(false) ? " lightning" : "");
+	}
+
+	/** The wishes added for Part B, listed with their signatures so it's easy to see each used the field it's about */
+	private static final List<String> NEW_WISHES = List.of("wish: Freeze Ray", "wish: Poison Dart Gun", "wish: Moon Boots",
+		"wish: Spider Gloves", "wish: Fish Gills", "wish: Long Arms", "wish: Shrink Potion", "wish: Giant Potion");
+
+	/** Wishes a kid would expect to play differently from each other; two in one category with one signature is sameness */
+	static final Map<String, List<String>> CATEGORIES = Map.of(
+		"guns", List.of("wish: Ray Gun", "wish: Nail Gun", "wish: Chain Gun", "wish: Rocket Launcher", "wish: Thor's Hammer",
+			"wish: Freeze Ray", "wish: Poison Dart Gun"),
+		"wearables", List.of("wish: Jetpack", "wish: Dash Boots", "wish: Steam Armor", "wish: God Armor", "wish: Moon Boots",
+			"wish: Spider Gloves", "wish: Fish Gills", "wish: Long Arms"),
+		"drinks", List.of("wish: Prime Energy Drink", "wish: Shrink Potion", "wish: Giant Potion"));
+
+	/** Per category, each signature that two or more of its results share, with their names */
+	static Map<String, Map<String, List<String>>> sameWithinCategory(List<Map.Entry<String, String>> labeledNbts) throws Exception {
+		Map<String, Map<String, List<String>>> same = new java.util.TreeMap<>();
+		for (Map.Entry<String, List<String>> category : CATEGORIES.entrySet()) {
+			Map<String, List<String>> bySignature = new LinkedHashMap<>();
+			for (Map.Entry<String, String> item : labeledNbts) {
+				if (!category.getValue().contains(item.getKey())) continue;
+				bySignature.computeIfAbsent(BehaviorSignature.of(item.getValue()), s -> new ArrayList<>()).add(item.getKey().replace("wish: ", ""));
+			}
+			bySignature.values().removeIf(labels -> labels.size() < 2);
+			if (!bySignature.isEmpty()) same.put(category.getKey(), bySignature);
+		}
+		return same;
 	}
 
 	/** How many results behave differently; repeats maps each shared signature to the results that share it */
@@ -232,6 +268,22 @@ public class ClaudeCraftEval {
 	}
 
 	@Test
+	void sameWithinCategoryFindsRepeats() throws Exception {
+		String bullet = "{id:\"infinite_craft:custom_crafted_item\",count:1i,components:{\"infinite_craft:shoot\":{kind:\"bullet\"}}}";
+		List<Map.Entry<String, String>> items = List.of(
+			Map.entry("wish: Nail Gun", bullet),
+			Map.entry("wish: Chain Gun", bullet),
+			Map.entry("wish: Freeze Ray", "{id:\"infinite_craft:custom_crafted_item\",count:1i,components:{\"infinite_craft:shoot\":{effects:[{id:\"minecraft:slowness\"}]}}}"),
+			Map.entry("wish: Ray Gun", "{id:\"infinite_craft:custom_crafted_item\",count:1i,components:{\"infinite_craft:shoot\":{}}}"),
+			// shares the bullet signature, but wearables and guns are different categories
+			Map.entry("wish: Moon Boots", bullet));
+		Map<String, Map<String, List<String>>> same = sameWithinCategory(items);
+		if (!same.equals(Map.of("guns", Map.of("shoot(bullet)", List.of("Nail Gun", "Chain Gun"))))) {
+			throw new AssertionError("same within a category: " + same);
+		}
+	}
+
+	@Test
 	void shootTakesEverydayColorNames() throws Exception {
 		for (String color : List.of("\"orange\"", "\"purple\"", "\"gold\"", "\"#33FF66\"", "16711680")) {
 			String nbt = "{id:\"minecraft:bow\",count:1i,components:{\"infinite_craft:shoot\":{kind:\"bullet\",color:" + color + "}}}";
@@ -319,7 +371,7 @@ public class ClaudeCraftEval {
 		assumeTrue(apiKey != null && !apiKey.isEmpty(), "ANTHROPIC_API_KEY not set, skipping the Claude eval");
 
 		StringBuilder report = new StringBuilder("# Claude craft eval\n\n");
-		StringBuilder summary = new StringBuilder("| Model | Clean | Usable | Inert | Failed | Avg time | Cost | Cost per craft | Distinct behaviors | Video guns and vehicles | Mod looks |\n|---|---|---|---|---|---|---|---|---|---|---|\n");
+		StringBuilder summary = new StringBuilder("| Model | Clean | Usable | Inert | Failed | Avg time | Cost | Cost per craft | Distinct behaviors | Same within a category | New wishes | Video guns and vehicles | Mod looks |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|\n");
 		// every item result, for the game test to use in a real world (see CraftedItemUseTest)
 		StringBuilder fixtures = new StringBuilder("# Crafted items from the last Claude eval. One per line: label<TAB>item NBT\n");
 
@@ -361,9 +413,21 @@ public class ClaudeCraftEval {
 			}
 			Variety variety = variety(results.stream().filter(r -> r.detail.startsWith("{")).map(r -> Map.entry(r.recipe, r.detail)).toList());
 			List<String> repeated = variety.repeats().entrySet().stream().map(e -> e.getKey() + ": " + String.join(", ", e.getValue())).toList();
-			summary.append("| %s | %d | %d | %d | %d | %.1fs | $%.4f | $%.4f | %s | %s | %d: %s |\n".formatted(
+			List<Map.Entry<String, String>> items = results.stream().filter(r -> r.detail.startsWith("{")).map(r -> Map.entry(r.recipe, r.detail)).toList();
+			List<String> same = new ArrayList<>();
+			sameWithinCategory(items).forEach((category, signatures) -> signatures.forEach((signature, names) ->
+				same.add("%s: %s: %s".formatted(category, signature, String.join(", ", names)))));
+			List<String> newWishes = new ArrayList<>();
+			for (Result r : results) {
+				if (NEW_WISHES.contains(r.recipe)) {
+					newWishes.add(r.recipe.replace("wish: ", "") + ": " + (r.detail.startsWith("{") ? BehaviorSignature.of(r.detail) : r.verdict));
+				}
+			}
+			summary.append("| %s | %d | %d | %d | %d | %.1fs | $%.4f | $%.4f | %s | %s | %s | %s | %d: %s |\n".formatted(
 				model, clean, usable, inert, failed, avgSeconds, cost, cost / results.size(),
 				variety.distinct() + "/" + variety.total() + (repeated.isEmpty() ? "" : "<br>" + String.join("<br>", repeated)),
+				same.isEmpty() ? "none" : String.join("<br>", same),
+				String.join("<br>", newWishes),
 				String.join("<br>", guns),
 				looks.size(), String.join("<br>", looks)));
 
@@ -383,7 +447,8 @@ public class ClaudeCraftEval {
 		String full = report.insert(report.indexOf("\n\n") + 2, summary + "\n" +
 			"*clean*: Minecraft parsed the whole result. *usable*: the item works but some components were dropped. " +
 			"*inert*: a custom item that does nothing (only a name and a model). *failed*: no item. " +
-			"*Distinct behaviors*: how many custom results do different things, by BehaviorSignature (names, looks, numbers and stats don't count).\n\n").toString();
+			"*Distinct behaviors*: how many custom results do different things, by BehaviorSignature (names, looks, numbers and stats don't count). " +
+			"*Same within a category*: guns, wearables or drinks that play the same; the pass mark is none.\n\n").toString();
 		Path out = Path.of("build", "claude-eval", "report.md");
 		Files.createDirectories(out.getParent());
 		Files.writeString(out, full);
