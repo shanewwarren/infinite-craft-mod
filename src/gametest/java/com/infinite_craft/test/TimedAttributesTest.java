@@ -132,13 +132,14 @@ public class TimedAttributesTest {
 
 	@GameTest(maxTicks = 20)
 	public void badSecondsAndTooManyModifiersAreClamped(TestContext context) {
+		// the eval's Giant Potion wrote 7 (scale, health, damage, step, two reaches, safe fall), so 8 keeps all of them
 		List<TimedAttributesConsumeEffect.Modifier> nine = new ArrayList<>();
 		for (int i = 0; i < 9; i++) {
 			nine.add(new TimedAttributesConsumeEffect.Modifier(EntityAttributes.SCALE,
 				new EntityAttributeModifier(Identifier.of("infinite_craft", "m" + i), 0.1, EntityAttributeModifier.Operation.ADD_VALUE)));
 		}
 		TimedAttributesConsumeEffect effect = new TimedAttributesConsumeEffect(nine, 99999f);
-		context.assertTrue(effect.seconds() == 600 && effect.modifiers().size() == 6,
+		context.assertTrue(effect.seconds() == 600 && effect.modifiers().size() == 8,
 			Text.literal("clamped to %s s and %d modifiers".formatted(effect.seconds(), effect.modifiers().size())));
 		context.assertTrue(new TimedAttributesConsumeEffect(nine, -3f).seconds() == 1, Text.literal("negative seconds not clamped to 1"));
 		// a parsed potion keeps its effect

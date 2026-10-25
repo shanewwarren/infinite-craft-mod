@@ -116,7 +116,7 @@ any vehicle; sneak-hitting it gives the item back repaired, and a destroyed vehi
 `infinite_craft:attributes` is a consume effect for `minecraft:consumable`'s `on_consume_effects`: attribute modifiers for a while, which
 vanilla potions can't do. A Shrink Potion: `{type:"infinite_craft:attributes", seconds:30.0f, modifiers:[{type:"minecraft:scale",
 id:"infinite_craft:shrink", amount:-0.75d, operation:"add_multiplied_total"}]}` (the `attribute_modifiers` format without a slot;
-1 to 600 seconds, up to 6 modifiers). Drinking another restarts the time instead of stacking; they come off when time runs out, on death,
+1 to 600 seconds, up to 8 modifiers). Drinking another restarts the time instead of stacking; they come off when time runs out, on death,
 and on logging out (they're never saved). A player whose size changes doesn't suffocate in a low ceiling while it lasts and for 3 s after.
 
 ### Item art

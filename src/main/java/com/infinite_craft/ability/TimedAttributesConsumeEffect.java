@@ -40,7 +40,7 @@ public record TimedAttributesConsumeEffect(List<Modifier> modifiers, float secon
 
 	public TimedAttributesConsumeEffect {
 		// keep whatever Claude writes playable
-		modifiers = modifiers.stream().limit(6).toList();
+		modifiers = modifiers.stream().limit(8).toList();
 		seconds = MathHelper.clamp(seconds, 1, 600);
 	}
 

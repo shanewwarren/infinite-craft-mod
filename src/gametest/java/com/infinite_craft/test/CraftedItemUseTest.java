@@ -93,6 +93,15 @@ public class CraftedItemUseTest {
 		useAll(context, List.of(new Fixture("shrink potion", TimedAttributesTest.SHRINK_POTION.strip())), "TimedAttributesTest", "timed-attributes.md");
 	}
 
+	// the eval's Long Arms: reach while held, which no worn-armor check sees
+	static final String LONG_ARMS = """
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:piston","minecraft:item_name":{text:"Long Arms",color:"gold"},"minecraft:max_stack_size":1,"minecraft:equippable":{slot:"offhand"},"minecraft:attribute_modifiers":[{type:"minecraft:block_interaction_range",id:"infinite_craft:long_arms_block_reach",amount:6.0d,operation:"add_value",slot:"hand"},{type:"minecraft:entity_interaction_range",id:"infinite_craft:long_arms_entity_reach",amount:4.0d,operation:"add_value",slot:"hand"}]}}""";
+
+	@GameTest(maxTicks = 20)
+	public void heldItemWithReachDoesSomething(TestContext context) {
+		useAll(context, List.of(new Fixture("long arms", LONG_ARMS.strip())), "CraftedItemUseTest", "held-items.md");
+	}
+
 	@GameTest(maxTicks = 20, required = false, skyAccess = true)
 	public void evalItemsDoSomething(TestContext context) {
 		useAll(context, evalFixtures(), evalItems().map(Path::toString).orElse("the checked-in eval snapshot"), "eval-items.md");
@@ -142,6 +151,11 @@ public class CraftedItemUseTest {
 		EquippableComponent equippable = stack.get(DataComponentTypes.EQUIPPABLE);
 		if (equippable != null && equippable.slot().isArmorSlot() && !modifiedAttributes(stack, equippable.slot()).isEmpty()) {
 			checks.add(wear(context, stack, equippable.slot()));
+		}
+		// a held item with no attack, like Long Arms: holding it changes the holder's attributes (a melee item is checked by hitting)
+		EquipmentSlot hand = equippable != null && equippable.slot() == EquipmentSlot.OFFHAND ? EquipmentSlot.OFFHAND : EquipmentSlot.MAINHAND;
+		if ((equippable == null || !equippable.slot().isArmorSlot()) && !isMelee(stack) && !modifiedAttributes(stack, hand).isEmpty()) {
+			checks.add(hold(context, stack, hand));
 		}
 		if (stack.contains(DataComponentTypes.GLIDER)) checks.add(glide(context, stack));
 		if (stack.contains(Abilities.THRUST)) checks.add(fly(context, stack));
@@ -267,8 +281,15 @@ public class CraftedItemUseTest {
 
 	// --- wearables: equipping changes the wearer's attributes
 
-	private static Check wear(TestContext context, ItemStack stack, EquipmentSlot slot) {
-		PlayerEntity player = player(context);
+	private record Changes(List<String> changed, List<String> unchanged) {
+
+		String detail() {
+			return String.join(", ", changed) + (unchanged.isEmpty() ? "" : "; unchanged " + unchanged);
+		}
+	}
+
+	/** Puts the item in the slot and reports which of its attributes moved on the player */
+	private static Changes equip(PlayerEntity player, ItemStack stack, EquipmentSlot slot) {
 		Map<RegistryEntry<EntityAttribute>, Double> before = new LinkedHashMap<>();
 		for (RegistryEntry<EntityAttribute> attribute : modifiedAttributes(stack, slot)) {
 			before.put(attribute, player.getAttributeValue(attribute));
@@ -284,6 +305,17 @@ public class CraftedItemUseTest {
 			if (Math.abs(after - value) > 1e-6) changed.add("%s %.2f→%.2f".formatted(id, value, after));
 			else unchanged.add(id);
 		});
+		return new Changes(changed, unchanged);
+	}
+
+	private static Check hold(TestContext context, ItemStack stack, EquipmentSlot hand) {
+		Changes changes = equip(player(context), stack, hand);
+		return new Check("hold", !changes.changed().isEmpty(), changes.detail());
+	}
+
+	private static Check wear(TestContext context, ItemStack stack, EquipmentSlot slot) {
+		PlayerEntity player = player(context);
+		Changes changes = equip(player, stack, slot);
 
 		// Modifiers replace the base item's own stats, so crafted armor can end up weaker than the plain item
 		PlayerEntity plain = player(context);
@@ -298,8 +330,7 @@ public class CraftedItemUseTest {
 					stack.getItem().getName().getString(), base));
 			}
 		}
-		return new Check("wear", !changed.isEmpty() && weaker.isEmpty(), String.join(", ", changed)
-			+ (unchanged.isEmpty() ? "" : "; unchanged " + unchanged)
+		return new Check("wear", !changes.changed().isEmpty() && weaker.isEmpty(), changes.detail()
 			+ (weaker.isEmpty() ? "" : "; WEAKER THAN BASE: " + String.join(", ", weaker)));
 	}
 
