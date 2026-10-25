@@ -24,7 +24,8 @@
 			"com.infinite_craft.test.BlastClientGameTest",
 			"com.infinite_craft.test.LaunchDashClientGameTest",
 			"com.infinite_craft.test.AuraClientGameTest",
-			"com.infinite_craft.test.VehicleClientGameTest"
+			"com.infinite_craft.test.VehicleClientGameTest",
+			"com.infinite_craft.test.PlaytestClientGameTest"
 		]
 	},
 	"depends": {

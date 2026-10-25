@@ -97,7 +97,7 @@ def build_report(lines):
     out = ["# Playtest report", "", "## Session", ""]
     day = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start / 1000))
     out.append("- %s to %s (%s)" % (day, time.strftime("%H:%M:%S", time.localtime(end / 1000)), duration(end - start)))
-    out.append("- %d crafts, %d failed" % (len(crafts), len(failures)))
+    out.append("- %d craft%s, %d failed" % (len(crafts), "" if len(crafts) == 1 else "s", len(failures)))
     out.append("- cost: $%.2f" % sum(c.get("costUsd", 0) for c in crafts))
     out += ["", "## Crafts", "", "| # | at | wish or recipe | result | does | used | held | kept |", "|---|---|---|---|---|---|---|---|"]
 
