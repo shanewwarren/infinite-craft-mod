@@ -195,6 +195,9 @@ public class AiPrompt {
 		// drink with effects
 		"""
 		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:energy_drink","minecraft:custom_model_data":{colors:[3394815]},"minecraft:item_name":{text:"Energy Drink",color:"aqua"},"minecraft:max_stack_size":16,"minecraft:consumable":{consume_seconds:0.8f,animation:"drink",sound:"minecraft:entity.generic.drink",on_consume_effects:[{type:"minecraft:apply_effects",effects:[{id:"minecraft:speed",duration:1200,amplifier:2},{id:"minecraft:jump_boost",duration:1200,amplifier:1}]}]}}}""",
+		// potion that changes the drinker for a while: infinite_craft:attributes
+		"""
+		{id:"infinite_craft:custom_crafted_item",count:3i,components:{"minecraft:item_model":"minecraft:potion","minecraft:item_name":{text:"Shrink Potion",color:"light_purple"},"minecraft:max_stack_size":16,"minecraft:consumable":{consume_seconds:0.8f,animation:"drink",sound:"minecraft:entity.generic.drink",on_consume_effects:[{type:"infinite_craft:attributes",seconds:30.0f,modifiers:[{type:"minecraft:scale",id:"infinite_craft:shrink",amount:-0.75d,operation:"add_multiplied_total"}]}]}}}""",
 		// melee weapon
 		"""
 		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:lightsaber","minecraft:custom_model_data":{colors:[3407667]},"minecraft:item_name":{text:"Green Lightsaber",color:"green"},"minecraft:max_stack_size":1,"minecraft:enchantment_glint_override":true,"minecraft:weapon":{},"minecraft:attribute_modifiers":[{type:"minecraft:attack_damage",id:"infinite_craft:saber_damage",amount:9.0d,operation:"add_value",slot:"mainhand"},{type:"minecraft:attack_speed",id:"infinite_craft:saber_speed",amount:-2.0d,operation:"add_value",slot:"mainhand"}]}}""",
@@ -204,6 +207,9 @@ public class AiPrompt {
 		// beam gun: infinite_craft:shoot fires with no ammo
 		"""
 		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:laser_blaster","minecraft:item_name":{text:"Laser Blaster",color:"red"},"minecraft:max_stack_size":1,"infinite_craft:shoot":{kind:"beam",damage:6.0f,color:"red",interval:10}}}""",
+		// beam gun whose hits slow mobs down
+		"""
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:ray_gun","minecraft:item_name":{text:"Freeze Ray",color:"aqua"},"minecraft:max_stack_size":1,"infinite_craft:shoot":{kind:"beam",damage:2.0f,color:"aqua",interval:10,effects:[{id:"minecraft:slowness",amplifier:3,seconds:6.0f}]}}}""",
 		// rapid-fire bullet gun
 		"""
 		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:minigun","minecraft:item_name":{text:"Minigun",color:"gray"},"minecraft:max_stack_size":1,"infinite_craft:shoot":{kind:"bullet",damage:3.0f,color:"gold",interval:4,spread:3.0f}}}""",
@@ -222,6 +228,9 @@ public class AiPrompt {
 		// boots that dash in mid-air
 		"""
 		{id:"minecraft:leather_boots",count:1i,components:{"minecraft:item_name":{text:"Dash Boots",color:"aqua"},"minecraft:dyed_color":3394815,"infinite_craft:dash":{power:1.5f,charges:2},"minecraft:attribute_modifiers":[{type:"minecraft:armor",id:"infinite_craft:dash_armor",amount:1.0d,operation:"add_value",slot:"feet"},{type:"minecraft:movement_speed",id:"infinite_craft:dash_speed",amount:0.2d,operation:"add_multiplied_base",slot:"feet"},{type:"minecraft:safe_fall_distance",id:"infinite_craft:dash_landing",amount:6.0d,operation:"add_value",slot:"feet"}]}}""",
+		// fun without fighting: boots that make you float like on the moon
+		"""
+		{id:"minecraft:leather_boots",count:1i,components:{"minecraft:item_name":{text:"Moon Boots",color:"gray"},"minecraft:dyed_color":12632256,"minecraft:attribute_modifiers":[{type:"minecraft:armor",id:"infinite_craft:moon_armor",amount:1.0d,operation:"add_value",slot:"feet"},{type:"minecraft:gravity",id:"infinite_craft:moon_gravity",amount:-0.65d,operation:"add_multiplied_base",slot:"feet"},{type:"minecraft:jump_strength",id:"infinite_craft:moon_jump",amount:0.3d,operation:"add_multiplied_base",slot:"feet"},{type:"minecraft:safe_fall_distance",id:"infinite_craft:moon_landing",amount:20.0d,operation:"add_value",slot:"feet"}]}}""",
 		// armor with bonuses (modifiers replace the base item's own armor, so include armor)
 		"""
 		{id:"minecraft:golden_chestplate",count:1i,components:{"minecraft:item_name":{text:"Holy Chestplate",color:"gold"},"minecraft:unbreakable":{},"minecraft:enchantments":{"minecraft:protection":4},"infinite_craft:aura":{effects:[{id:"minecraft:regeneration"},{id:"minecraft:fire_resistance"}],particle:"minecraft:end_rod",damage:2.0f,radius:4.0f},"minecraft:attribute_modifiers":[{type:"minecraft:armor",id:"infinite_craft:holy_armor",amount:10.0d,operation:"add_value",slot:"chest"},{type:"minecraft:max_health",id:"infinite_craft:holy_health",amount:10.0d,operation:"add_value",slot:"chest"}]}}""",
@@ -273,7 +282,10 @@ public class AiPrompt {
 			\t\t\tLeave it off for ray guns and magic that only happens to explode. Lightning never breaks blocks.
 			\t\t\tKeep blasting guns slow (interval 20 or more): a blast every shot is chaos.
 			\t\t\tsound plays on EVERY shot, so leave it out (beams zap, bullets click) or pick a short one like "minecraft:entity.blaze.shoot"; never explosions or long sounds like beacon or music.
-			\t\t\tMake different guns feel different: a chain gun fires every 4 ticks with some spread, a ray gun is a colored beam, a shotgun fires several bullets with wide spread, a sniper is slow and hits hard.
+			\t\t\tMake different guns feel different: a chain gun fires every 4 ticks with some spread, a ray gun is a colored beam, a shotgun fires several bullets with wide spread, a sniper is slow and hits hard,
+			\t\t\ta freeze ray slows what it hits, a poison dart gun poisons it.
+			\t\t\teffects puts status effects on each mob a shot hits, never the shooter or their pets: [{id:"minecraft:slowness",amplifier:3,seconds:6.0f}] (amplifier 0 is level I, up to 3; 1 to 30 seconds).
+			\t\t\tFor freeze rays (slowness), poison dart guns (poison), sleep or stun guns (slowness and weakness), tracer rounds (glowing), levitation wands (levitation).
 			\t\t\tGive it a fitting "minecraft:item_model" on infinite_craft:custom_crafted_item. A vanilla bow or crossbow alone needs arrows the player may not have, so add "infinite_craft:shoot" to those too.
 			\t\tPunchers, hammers, anything that should send mobs flying: "infinite_craft:launch", this mod's component. A melee hit flings the mob away in a big arc with a trail.
 			\t\t\tFields: power (how far: 1 is about 10 blocks, 2 about 20, 3 about 30), up (how high it arcs: 0 skims the ground, 1 is a high arc, 2 is nearly straight up).
@@ -287,6 +299,18 @@ public class AiPrompt {
 			\t\t\tFields: effects (status effects kept on while worn, [{id:"minecraft:regeneration",amplifier:0}]; amplifier 0 is level I, up to 3), particle (a simple particle drawn around
 			\t\t\tthe wearer: "minecraft:end_rod" holy sparkle, "minecraft:flame", "minecraft:soul_fire_flame", "minecraft:heart", "minecraft:enchant", "minecraft:electric_spark"...; or leave it out and set color for glowing dust),
 			\t\t\tdamage (per second to monsters within radius blocks, never animals, pets or players; 1 to 4) and radius (1 to 8). Armor that should feel powerful, holy or magic gets an aura.
+			\t\tFun without fighting (shrink rings, giant crowns, moon boots, spider gloves, long arms, fish gills): not every item is a weapon.
+			\t\t\tAttribute modifiers on a worn or held item change the player's body and the rules of the world; use the slot it's worn or held in:
+			\t\t\t"minecraft:scale" (size: amount -0.75 with operation add_multiplied_total is a quarter size, 2.0 is three times as big; Shrink Ring, Giant Crown),
+			\t\t\t"minecraft:gravity" (-0.65 add_multiplied_base floats like on the moon; Moon Boots, with a safe_fall_distance modifier),
+			\t\t\t"minecraft:step_height" (walk straight up blocks, 1 to 3; Spider Gloves), "minecraft:jump_strength" (spring shoes), "minecraft:movement_speed" (speed shoes),
+			\t\t\t"minecraft:block_interaction_range" and "minecraft:entity_interaction_range" (reach far away; Long Arms, Grabber Claw),
+			\t\t\t"minecraft:oxygen_bonus" and "minecraft:water_movement_efficiency" (breathe and swim underwater; Fish Gills, Scuba Helmet),
+			\t\t\t"minecraft:burning_time" (negative: fire goes out fast), "minecraft:mining_efficiency" (dig faster), "minecraft:sneaking_speed" (ninja sneaking),
+			\t\t\t"minecraft:fall_damage_multiplier" (0 means no fall damage).
+			\t\tPotions that change you for a while (Shrink Potion, Giant Potion, Moon Juice): "minecraft:consumable" with this mod's effect in on_consume_effects:
+			\t\t\t{type:"infinite_craft:attributes",seconds:30.0f,modifiers:[{type:"minecraft:scale",id:"infinite_craft:shrink",amount:-0.75d,operation:"add_multiplied_total"}]}.
+			\t\t\tModifiers are written like attribute_modifiers without a slot, each with its own id. They wear off after seconds (1 to 600); drinking another restarts the time. Give a few (count 2-4).
 			\t\tFlying under power (jetpacks, rocket boots, flying armor): "infinite_craft:thrust", this mod's component, on an item with "minecraft:equippable".
 			\t\t\tWhile it is worn, holding jump flies up and holding forward zooms ahead. Fields: power (lift, 1 climbs about 7 blocks a second), speed (forward boost, 0 to 3).
 			\t\t\tAdd a safe_fall_distance modifier so landing doesn't hurt. For a jetpack worn on the back, give equippable asset_id:"infinite_craft:jetpack" so players see it.

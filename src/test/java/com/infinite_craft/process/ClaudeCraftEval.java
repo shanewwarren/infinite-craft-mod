@@ -201,6 +201,36 @@ public class ClaudeCraftEval {
 		}
 	}
 
+	// the vanilla attributes the toolkit's "Fun without fighting" section must teach (spec, Part B)
+	private static final List<String> FUN_ATTRIBUTES = List.of("scale", "gravity", "step_height", "jump_strength", "movement_speed",
+		"block_interaction_range", "entity_interaction_range", "oxygen_bonus", "water_movement_efficiency", "burning_time",
+		"mining_efficiency", "sneaking_speed", "fall_damage_multiplier");
+
+	@Test
+	void toolkitAttributesExist() {
+		String prompt = AiPrompt.GeneratePrompt(new ArrayList<>(recipes().get(0).inputs()), 3);
+		int start = prompt.indexOf("Fun without fighting");
+		if (start < 0) throw new AssertionError("the toolkit has no \"Fun without fighting\" section");
+		String section = prompt.substring(start, prompt.indexOf("Potions that change you", start));
+		java.util.regex.Matcher ids = java.util.regex.Pattern.compile("minecraft:([a-z_]+)").matcher(section);
+		Set<String> named = new java.util.TreeSet<>();
+		while (ids.find()) named.add(ids.group(1));
+		for (String id : named) {
+			if (!Registries.ATTRIBUTE.containsId(Identifier.ofVanilla(id))) throw new AssertionError("not an attribute on this version: minecraft:" + id);
+		}
+		List<String> missing = FUN_ATTRIBUTES.stream().filter(id -> !named.contains(id)).toList();
+		if (!missing.isEmpty()) throw new AssertionError("the section doesn't teach " + missing);
+	}
+
+	@Test
+	void newExamplesArePresent() {
+		for (String name : List.of("Shrink Potion", "Moon Boots", "Freeze Ray")) {
+			if (AiPrompt.POWER_EXAMPLES.stream().noneMatch(e -> e.contains("\"" + name + "\""))) {
+				throw new AssertionError("no prompt example named " + name);
+			}
+		}
+	}
+
 	@Test
 	void shootTakesEverydayColorNames() throws Exception {
 		for (String color : List.of("\"orange\"", "\"purple\"", "\"gold\"", "\"#33FF66\"", "16711680")) {

@@ -1,8 +1,7 @@
 package com.infinite_craft.test;
 
+import static com.infinite_craft.test.CraftedItemUseTest.example;
 import static com.infinite_craft.test.CraftedItemUseTest.tick;
-
-import com.infinite_craft.ai.AiPrompt;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.entity.EntityType;
@@ -44,7 +43,7 @@ public class LaunchTest {
 
 	@GameTest(maxTicks = 80, skyAccess = true, structure = RUNWAY)
 	public void promptMegaPuncherLaunches(TestContext context) {
-		punch(context, AiPrompt.POWER_EXAMPLES.get(2), (across, up) -> context.assertTrue(across >= 15 && up >= 2,
+		punch(context, example("Mega Puncher"), (across, up) -> context.assertTrue(across >= 15 && up >= 2,
 			Text.literal("the prompt's Mega Puncher sent the pig %.1f blocks across and %.1f up".formatted(across, up))));
 	}
 

@@ -1,5 +1,6 @@
 package com.infinite_craft.test;
 
+import static com.infinite_craft.test.CraftedItemUseTest.example;
 import static com.infinite_craft.test.CraftedItemUseTest.floor;
 import static com.infinite_craft.test.CraftedItemUseTest.player;
 import static com.infinite_craft.test.CraftedItemUseTest.tick;
@@ -14,6 +15,7 @@ import com.infinite_craft.ability.TimedAttributesConsumeEffect;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.block.Blocks;
 import net.minecraft.component.DataComponentTypes;
+import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.player.PlayerEntity;
@@ -31,8 +33,7 @@ import net.minecraft.util.math.BlockPos;
  */
 public class TimedAttributesTest {
 
-	static final String SHRINK_POTION = """
-		{id:"infinite_craft:custom_crafted_item",count:3i,components:{"minecraft:item_model":"minecraft:potion","minecraft:item_name":{text:"Shrink Potion",color:"light_purple"},"minecraft:max_stack_size":16,"minecraft:consumable":{consume_seconds:0.8f,animation:"drink",sound:"minecraft:entity.generic.drink",on_consume_effects:[{type:"infinite_craft:attributes",seconds:30.0f,modifiers:[{type:"minecraft:scale",id:"infinite_craft:shrink",amount:-0.75d,operation:"add_multiplied_total"}]}]}}}""";
+	static final String SHRINK_POTION = example("Shrink Potion");
 
 	private static final Identifier SHRINK = Identifier.of("infinite_craft", "shrink");
 
@@ -144,6 +145,29 @@ public class TimedAttributesTest {
 		ItemStack potion = ThrustTest.parse(context, SHRINK_POTION);
 		context.assertTrue(potion.get(DataComponentTypes.CONSUMABLE).onConsumeEffects().stream().anyMatch(TimedAttributesConsumeEffect.class::isInstance),
 			Text.literal("the Shrink Potion parsed without its timed attributes"));
+		context.complete();
+	}
+
+	@GameTest(maxTicks = 20, skyAccess = true)
+	public void moonBootsJumpLandsUnhurt(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		player.equipStack(EquipmentSlot.FEET, ThrustTest.parse(context, example("Moon Boots")));
+		ticks(player, 5);
+		double gravity = player.getAttributeValue(EntityAttributes.GRAVITY);
+		context.assertTrue(gravity < 0.08, Text.literal("Moon Boots left gravity at " + gravity));
+		double ground = player.getY();
+		float health = player.getHealth();
+		double peak = ground;
+		for (int t = 0; t < 200; t++) {
+			player.setJumping(t < 2);
+			tick(player);
+			peak = Math.max(peak, player.getY());
+			if (t > 5 && player.isOnGround()) break;
+		}
+		context.assertTrue(peak - ground >= 2, Text.literal("Moon Boots jumped only %.2f blocks (a plain jump is about 1.25)".formatted(peak - ground)));
+		context.assertTrue(player.isOnGround() && player.getHealth() == health,
+			Text.literal("after a %.1f-block moon jump: on ground %s, health %s to %s".formatted(peak - ground, player.isOnGround(), health, player.getHealth())));
 		context.complete();
 	}
 }

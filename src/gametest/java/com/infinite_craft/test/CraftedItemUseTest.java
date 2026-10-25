@@ -496,6 +496,12 @@ public class CraftedItemUseTest {
 		}
 	}
 
+	/** The prompt's own example with this name, so what Claude is shown is what's tested */
+	static String example(String name) {
+		return AiPrompt.POWER_EXAMPLES.stream().filter(e -> e.contains("\"" + name + "\"")).findFirst()
+			.orElseThrow(() -> new IllegalStateException("no prompt example named " + name)).strip();
+	}
+
 	/** A survival player standing on the test floor, looking at where dummies spawn */
 	static PlayerEntity player(TestContext context) {
 		PlayerEntity player = context.createMockPlayer(GameMode.SURVIVAL);
