@@ -178,4 +178,21 @@ public class ShootTest {
 			context.complete();
 		});
 	}
+
+	@GameTest(maxTicks = 60)
+	public void instantEffectHitsOnce(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		player.setStackInHand(Hand.MAIN_HAND, ThrustTest.parse(context, """
+			{id:"infinite_craft:custom_crafted_item",count:1i,components:{"infinite_craft:shoot":{kind:"beam",damage:0.0f,interval:200,effects:[{id:"minecraft:instant_damage",amplifier:0,seconds:5.0f}]}}}"""));
+		PigEntity dummy = dummy(context);
+		aim(player, dummy);
+		holdTrigger(player, 0);
+		context.runAtTick(40, () -> {
+			float damage = dummy.getMaxHealth() - dummy.getHealth();
+			// instant damage I does 6 once, not 6 every tick of the effect
+			context.assertTrue(damage > 0 && damage <= 6.5f, Text.literal("one instant-damage hit did %.1f damage".formatted(damage)));
+			context.complete();
+		});
+	}
 }

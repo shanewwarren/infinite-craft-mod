@@ -137,7 +137,9 @@ public class ShootAbility {
 			return;
 		}
 		for (ShootComponent.HitEffect effect : shoot.effects()) {
-			living.addStatusEffect(new StatusEffectInstance(effect.id(), Math.round(effect.seconds() * 20), effect.amplifier()), shooter);
+			// an instant effect (instant_damage, instant_health) applies on every tick it lasts, so it gets one tick
+			int ticks = effect.id().value().isInstant() ? 1 : Math.round(effect.seconds() * 20);
+			living.addStatusEffect(new StatusEffectInstance(effect.id(), ticks, effect.amplifier()), shooter);
 		}
 	}
 

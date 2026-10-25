@@ -35,7 +35,7 @@ public class TimedAttributesTest {
 
 	static final String SHRINK_POTION = example("Shrink Potion");
 
-	private static final Identifier SHRINK = Identifier.of("infinite_craft", "shrink");
+	private static final Identifier SHRINK = Identifier.of("infinite_craft", "timed/shrink");
 
 	/** Drinks the item in the main hand the way a player does: hold use until it's consumed */
 	static void drink(PlayerEntity player, ItemStack potion) {
@@ -168,6 +168,55 @@ public class TimedAttributesTest {
 		context.assertTrue(peak - ground >= 2, Text.literal("Moon Boots jumped only %.2f blocks (a plain jump is about 1.25)".formatted(peak - ground)));
 		context.assertTrue(player.isOnGround() && player.getHealth() == health,
 			Text.literal("after a %.1f-block moon jump: on ground %s, health %s to %s".formatted(peak - ground, player.isOnGround(), health, player.getHealth())));
+		context.complete();
+	}
+
+	// one id on two attributes: vanilla allows it, since ids only need to be unique within an attribute
+	private static final String GIANT_STEPS_POTION = """
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:consumable":{consume_seconds:0.8f,on_consume_effects:[{type:"infinite_craft:attributes",seconds:2.0f,modifiers:[{type:"minecraft:scale",id:"infinite_craft:giant",amount:2.0d,operation:"add_multiplied_total"},{type:"minecraft:step_height",id:"infinite_craft:giant",amount:1.0d,operation:"add_value"}]}]}}}""";
+
+	@GameTest(maxTicks = 20, skyAccess = true)
+	public void sameIdOnTwoAttributesBothWearOff(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		double step = player.getAttributeValue(EntityAttributes.STEP_HEIGHT);
+		drink(player, ThrustTest.parse(context, GIANT_STEPS_POTION));
+		context.assertTrue(scale(player) > 2.9 && player.getAttributeValue(EntityAttributes.STEP_HEIGHT) > step,
+			Text.literal("the potion didn't apply both: scale %s, step %s".formatted(scale(player), player.getAttributeValue(EntityAttributes.STEP_HEIGHT))));
+		ticks(player, 2 * 20 + 5);
+		context.assertTrue(scale(player) == 1.0 && player.getAttributeValue(EntityAttributes.STEP_HEIGHT) == step,
+			Text.literal("after it wore off: scale %s, step %s".formatted(scale(player), player.getAttributeValue(EntityAttributes.STEP_HEIGHT))));
+		context.complete();
+	}
+
+	@GameTest(maxTicks = 20)
+	public void respawnedPlayerStartsClean(TestContext context) {
+		floor(context);
+		PlayerEntity before = player(context);
+		drink(before, ThrustTest.parse(context, SHRINK_POTION));
+		// a respawn (like leaving the End) makes a new player that keeps the old one's network id
+		PlayerEntity after = player(context);
+		after.setId(before.getId());
+		context.assertTrue(!TimedAttributes.isActive(after), Text.literal("the respawned player inherited the old one's timed attributes"));
+		context.complete();
+	}
+
+	// Claude copies example ids, so a potion can reuse the id a worn item's modifier has
+	private static final String MOON_JUICE = """
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:consumable":{consume_seconds:0.8f,on_consume_effects:[{type:"infinite_craft:attributes",seconds:2.0f,modifiers:[{type:"minecraft:gravity",id:"infinite_craft:moon_gravity",amount:-0.5d,operation:"add_multiplied_base"}]}]}}}""";
+
+	@GameTest(maxTicks = 20)
+	public void potionDoesNotBreakWornBoots(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		player.equipStack(EquipmentSlot.FEET, ThrustTest.parse(context, example("Moon Boots")));
+		ticks(player, 5);
+		double boots = player.getAttributeValue(EntityAttributes.GRAVITY);
+		drink(player, ThrustTest.parse(context, MOON_JUICE));
+		ticks(player, 2 * 20 + 5);
+		double after = player.getAttributeValue(EntityAttributes.GRAVITY);
+		context.assertTrue(Math.abs(after - boots) < 1e-6,
+			Text.literal("after the potion wore off, the boots' gravity is %.4f, was %.4f".formatted(after, boots)));
 		context.complete();
 	}
 }
