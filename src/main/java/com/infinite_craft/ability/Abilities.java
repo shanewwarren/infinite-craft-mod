@@ -1,6 +1,7 @@
 package com.infinite_craft.ability;
 
 import com.infinite_craft.InfiniteCraft;
+import com.infinite_craft.playtest.CraftId;
 import com.infinite_craft.vehicle.Vehicles;
 
 import net.fabricmc.fabric.api.item.v1.ComponentTooltipAppenderRegistry;
@@ -59,6 +60,8 @@ public class Abilities {
 		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, DASH);
 		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, AURA);
 		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, VEHICLE);
+		// hidden: shows no tooltip
+		CraftId.initialize();
 		LaunchAbility.initialize();
 		Blast.initialize();
 		Vehicles.initialize();

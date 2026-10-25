@@ -7,5 +7,8 @@
   "chat.message.infinite_craft.craft.return": "Returned: ",
   "item.infinite_craft.element_catcher": "Element Catcher",
   "item.infinite_craft.element_catcher.tooltip": "Right-click to collect an basic element",
-  "item.infinite_craft.element_catcher.tooltip.2": "Get Earth, Fire, Water and Wind in different environments"
+  "item.infinite_craft.element_catcher.tooltip.2": "Get Earth, Fire, Water and Wind in different environments",
+  "title.infinite_craft.you_made": "You made",
+  "title.infinite_craft.in_inventory": "You made (it's in your inventory)",
+  "title.infinite_craft.dropped": "You made (it's at your feet)"
 }

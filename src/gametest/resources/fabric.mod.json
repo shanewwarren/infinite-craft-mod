@@ -13,7 +13,9 @@
 			"com.infinite_craft.test.LaunchTest",
 			"com.infinite_craft.test.DashTest",
 			"com.infinite_craft.test.AuraTest",
-			"com.infinite_craft.test.VehicleTest"
+			"com.infinite_craft.test.VehicleTest",
+			"com.infinite_craft.test.CraftHandoffTest",
+			"com.infinite_craft.test.CraftResultsTest"
 		],
 		"fabric-client-gametest": [
 			"com.infinite_craft.test.ShootClientGameTest",
@@ -22,7 +24,8 @@
 			"com.infinite_craft.test.BlastClientGameTest",
 			"com.infinite_craft.test.LaunchDashClientGameTest",
 			"com.infinite_craft.test.AuraClientGameTest",
-			"com.infinite_craft.test.VehicleClientGameTest"
+			"com.infinite_craft.test.VehicleClientGameTest",
+			"com.infinite_craft.test.PlaytestClientGameTest"
 		]
 	},
 	"depends": {

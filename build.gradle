@@ -254,6 +254,15 @@ tasks.named('runClientGameTest') {
 	systemProperty 'infiniteCraft.clientTests', project.findProperty('clientTests') ?: ''
 }
 
+// The playtest report script's tests (tools/playtest); part of `check`, so `build` and CI run them
+tasks.register('testPlaytestReport', Exec) {
+	group = 'verification'
+	commandLine 'python3', '-m', 'unittest', 'discover', '-s', 'tools/playtest', '-p', 'test_*.py'
+	inputs.dir('tools/playtest')
+	outputs.upToDateWhen { false }
+}
+tasks.named('check') { dependsOn 'testPlaytestReport' }
+
 test {
 	useJUnitPlatform()
 	// Forward the eval settings to the test JVM; without ANTHROPIC_API_KEY the eval is skipped

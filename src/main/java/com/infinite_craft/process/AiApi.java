@@ -62,7 +62,7 @@ public class AiApi {
 		BetaMessage response = InfiniteCraft.claude.getClient().beta().messages().create(
 			InfiniteCraft.claude.buildParams(prompt)
 		);
-		InfiniteCraft.claude.logUsage(response);
+		double cost = InfiniteCraft.claude.logUsage(response);
 		BetaStopReason stopReason = response.stopReason().orElse(null);
 		if(BetaStopReason.REFUSAL.equals(stopReason)){
 			throw new AiProblemException("Claude declined to craft this");
@@ -72,11 +72,15 @@ public class AiApi {
 		}
 		StringBuilder text = new StringBuilder();
 		response.content().forEach(block -> block.text().ifPresent(t -> text.append(t.text())));
+		JsonObject result;
 		try {
-			return JsonParser.parseString(text.toString()).getAsJsonObject();
+			result = JsonParser.parseString(text.toString()).getAsJsonObject();
 		} catch(Exception e) {
 			throw new AiProblemException("Claude returned something that isn't JSON: " + text);
 		}
+		// for the playtest log
+		result.addProperty("costUsd", cost);
+		return result;
     }
     public static JsonObject doPostOllama(String prompt) throws IOException, RuntimeException {
 		String urlStr="http://localhost:11434/api/generate";

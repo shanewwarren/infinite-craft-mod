@@ -61,6 +61,23 @@ with the client on where the player ended up. `VehicleClientGameTest` places a T
 Fabric runs every client test in one window. While working on one, `./gradlew runClientGameTest -PclientTests=Vehicle` runs only the
 tests whose class name contains `Vehicle` (comma-separate several); without it they all run.
 
+### Playtest report: what did they actually play with?
+
+Every craft is logged to `logs/latest.log` as a line starting with `[InfiniteCraft/playtest]`: the ingredients (a renamed one is the
+player's wish), the result, what it does, what it cost, and later whether it got used (right-click, hit, worn, fired from a vehicle),
+thrown away, or was still in the inventory when the player left. Nothing leaves your machine. After a session, run
+
+    python3 tools/playtest/report.py logs/latest.log
+
+(put rotated `logs/*.log.gz` files from the same session before `latest.log`, or add `-o report.md` to save it). The report lists each
+craft with what it does and how it was used, a variety score (how many crafts do different things, ignoring names, looks and bigger
+numbers), the mod abilities that never came up, and flags: never used, thrown away within a minute, items Minecraft could only partly read,
+and failed crafts. The eval's report has the same variety score (*Distinct behaviors*), computed by `BehaviorSignature`.
+
+A new craft goes straight into the player's hand: the selected slot if it's free, else the first free hotbar slot (which gets selected),
+with the item's name shown as a title. `CraftHandoffTest` and `PlaytestClientGameTest` check both, the latter in a real client
+that fires, wears and throws away crafted items and then reads its own `latest.log`.
+
 ### Mod abilities Claude can give items
 
 `infinite_craft:shoot` makes any item fire while right click is held, with no ammo:

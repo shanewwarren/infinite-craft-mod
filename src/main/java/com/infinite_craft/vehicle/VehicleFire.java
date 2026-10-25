@@ -2,6 +2,7 @@ package com.infinite_craft.vehicle;
 
 import com.infinite_craft.ability.Abilities;
 import com.infinite_craft.ability.ShootAbility;
+import com.infinite_craft.playtest.Playtest;
 import com.infinite_craft.ability.ShootComponent;
 
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -40,6 +41,10 @@ public class VehicleFire {
 		if (shoot == null) {
 			return false;
 		}
-		return ShootAbility.fire(rider.getEntityWorld(), rider, gun, shoot, vehicle.muzzle(rider.getPitch(), rider.getYaw())) == ActionResult.SUCCESS;
+		boolean fired = ShootAbility.fire(rider.getEntityWorld(), rider, gun, shoot, vehicle.muzzle(rider.getPitch(), rider.getYaw())) == ActionResult.SUCCESS;
+		if (fired) {
+			Playtest.fired(rider, gun);
+		}
+		return fired;
 	}
 }

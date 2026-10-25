@@ -2,10 +2,15 @@ package com.infinite_craft.process;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -16,13 +21,13 @@ import com.google.gson.JsonObject;
 import com.infinite_craft.InfiniteCraft;
 import com.infinite_craft.InfiniteCraftConfig;
 import com.infinite_craft.InfiniteItem;
+import com.infinite_craft.TestBootstrap;
 import com.infinite_craft.ability.Abilities;
 import com.infinite_craft.ai.AiPrompt;
 import com.infinite_craft.ai.Claude;
 import com.infinite_craft.element.ElementItems;
+import com.infinite_craft.playtest.BehaviorSignature;
 
-import net.minecraft.Bootstrap;
-import net.minecraft.SharedConstants;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -30,7 +35,6 @@ import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.StringNbtReader;
-import net.minecraft.registry.BuiltinRegistries;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.text.Text;
@@ -54,12 +58,7 @@ public class ClaudeCraftEval {
 
 	@BeforeAll
 	static void bootstrap() {
-		SharedConstants.createGameVersion();
-		Bootstrap.initialize();
-		Abilities.initialize();
-		InfiniteItem.initialize();
-		ElementItems.initialize();
-		registries = BuiltinRegistries.createWrapperLookup();
+		registries = TestBootstrap.registries();
 	}
 
 	private static List<Recipe> recipes() {
@@ -140,6 +139,29 @@ public class ClaudeCraftEval {
 			s.getBoolean("lightning").orElse(false) ? " lightning" : "");
 	}
 
+	/** How many results behave differently; repeats maps each shared signature to the results that share it */
+	record Variety(int distinct, int total, Map<String, List<String>> repeats) {}
+
+	/**
+	 * Counts custom results that do something (see BehaviorSignature). Breakdowns, Vanillaify results and plain
+	 * vanilla items all share the empty signature, so they're left out rather than swamping the score
+	 */
+	static Variety variety(List<Map.Entry<String, String>> labeledNbts) throws Exception {
+		Map<String, List<String>> bySignature = new LinkedHashMap<>();
+		for (Map.Entry<String, String> item : labeledNbts) {
+			String label = item.getKey();
+			if (label.contains("(break down)") || label.contains("vanillaify")) continue;
+			String signature = BehaviorSignature.of(item.getValue());
+			if (signature.isEmpty()) continue;
+			bySignature.computeIfAbsent(signature, s -> new ArrayList<>()).add(label.replace("wish: ", ""));
+		}
+		Map<String, List<String>> repeats = new LinkedHashMap<>();
+		bySignature.forEach((signature, labels) -> {
+			if (labels.size() > 1) repeats.put(signature, labels);
+		});
+		return new Variety(bySignature.size(), bySignature.values().stream().mapToInt(List::size).sum(), repeats);
+	}
+
 	/** The item_model a result asks for, if any */
 	static Optional<String> itemModel(String nbt) throws Exception {
 		return StringNbtReader.readCompound(nbt).getCompound("components").flatMap(c -> c.getString("minecraft:item_model"));
@@ -150,6 +172,33 @@ public class ClaudeCraftEval {
 		Identifier id = Identifier.tryParse(model);
 		return id != null && (Registries.ITEM.containsId(id) && !id.getNamespace().equals(InfiniteCraft.MOD_ID)
 			|| AiPrompt.craftedModels().stream().anyMatch(m -> m.model().equals(model)));
+	}
+
+	@Test
+	void baselineVarietyIsPinned() throws Exception {
+		List<Map.Entry<String, String>> items = new ArrayList<>();
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+				ClaudeCraftEval.class.getResourceAsStream("/variety/eval-2026-10-25-opus.txt"), StandardCharsets.UTF_8))) {
+			reader.lines().filter(l -> !l.startsWith("#") && l.contains("\t")).forEach(l -> {
+				String[] parts = l.split("\t", 2);
+				items.add(Map.entry(parts[0].replaceFirst("^[^:]+: ", ""), parts[1]));
+			});
+		}
+		StringBuilder signatures = new StringBuilder();
+		for (Map.Entry<String, String> item : items) {
+			signatures.append(item.getKey()).append(": ").append(BehaviorSignature.of(item.getValue())).append('\n');
+		}
+		System.out.print(signatures.toString().replaceAll("(?m)^", "[ClaudeCraftEval] "));
+		String pinned = new String(ClaudeCraftEval.class.getResourceAsStream("/variety/eval-2026-10-25-opus.signatures.txt").readAllBytes(), StandardCharsets.UTF_8);
+		if (!signatures.toString().equals(pinned)) {
+			throw new AssertionError("BehaviorSignature changed how existing items are bucketed (see variety/eval-2026-10-25-opus.signatures.txt)");
+		}
+		Variety variety = variety(items);
+		System.out.printf("[ClaudeCraftEval] baseline: %d of %d distinct behaviors, repeats %s%n", variety.distinct(), variety.total(), variety.repeats());
+		// the ruler: if BehaviorSignature changes how existing items are bucketed, this moves and old scores stop comparing
+		if (variety.distinct() != 21 || variety.total() != 22) {
+			throw new AssertionError("baseline moved: %d of %d, was 21 of 22".formatted(variety.distinct(), variety.total()));
+		}
 	}
 
 	@Test
@@ -240,7 +289,7 @@ public class ClaudeCraftEval {
 		assumeTrue(apiKey != null && !apiKey.isEmpty(), "ANTHROPIC_API_KEY not set, skipping the Claude eval");
 
 		StringBuilder report = new StringBuilder("# Claude craft eval\n\n");
-		StringBuilder summary = new StringBuilder("| Model | Clean | Usable | Inert | Failed | Avg time | Cost | Cost per craft | Video guns and vehicles | Mod looks |\n|---|---|---|---|---|---|---|---|---|---|\n");
+		StringBuilder summary = new StringBuilder("| Model | Clean | Usable | Inert | Failed | Avg time | Cost | Cost per craft | Distinct behaviors | Video guns and vehicles | Mod looks |\n|---|---|---|---|---|---|---|---|---|---|---|\n");
 		// every item result, for the game test to use in a real world (see CraftedItemUseTest)
 		StringBuilder fixtures = new StringBuilder("# Crafted items from the last Claude eval. One per line: label<TAB>item NBT\n");
 
@@ -280,8 +329,12 @@ public class ClaudeCraftEval {
 					guns.add(r.recipe.replace("wish: ", "") + ": " + (r.detail.startsWith("{") ? vehicleSummary(r.detail) : r.verdict));
 				}
 			}
-			summary.append("| %s | %d | %d | %d | %d | %.1fs | $%.4f | $%.4f | %s | %d: %s |\n".formatted(
-				model, clean, usable, inert, failed, avgSeconds, cost, cost / results.size(), String.join("<br>", guns),
+			Variety variety = variety(results.stream().filter(r -> r.detail.startsWith("{")).map(r -> Map.entry(r.recipe, r.detail)).toList());
+			List<String> repeated = variety.repeats().entrySet().stream().map(e -> e.getKey() + ": " + String.join(", ", e.getValue())).toList();
+			summary.append("| %s | %d | %d | %d | %d | %.1fs | $%.4f | $%.4f | %s | %s | %d: %s |\n".formatted(
+				model, clean, usable, inert, failed, avgSeconds, cost, cost / results.size(),
+				variety.distinct() + "/" + variety.total() + (repeated.isEmpty() ? "" : "<br>" + String.join("<br>", repeated)),
+				String.join("<br>", guns),
 				looks.size(), String.join("<br>", looks)));
 
 			report.append("## ").append(model).append("\n\n| Recipe | Verdict | Time | Result |\n|---|---|---|---|\n");
@@ -290,11 +343,17 @@ public class ClaudeCraftEval {
 					r.recipe, r.verdict, r.millis / 1000.0, r.detail.replace("|", "\\|").replace("\n", " ")));
 			}
 			report.append("\n");
+			if (!repeated.isEmpty()) {
+				report.append("Repeated behaviors (different names, same thing to do):\n\n");
+				repeated.forEach(line -> report.append("- ").append(line).append('\n'));
+				report.append("\n");
+			}
 		}
 
 		String full = report.insert(report.indexOf("\n\n") + 2, summary + "\n" +
 			"*clean*: Minecraft parsed the whole result. *usable*: the item works but some components were dropped. " +
-			"*inert*: a custom item that does nothing (only a name and a model). *failed*: no item.\n\n").toString();
+			"*inert*: a custom item that does nothing (only a name and a model). *failed*: no item. " +
+			"*Distinct behaviors*: how many custom results do different things, by BehaviorSignature (names, looks, numbers and stats don't count).\n\n").toString();
 		Path out = Path.of("build", "claude-eval", "report.md");
 		Files.createDirectories(out.getParent());
 		Files.writeString(out, full);
