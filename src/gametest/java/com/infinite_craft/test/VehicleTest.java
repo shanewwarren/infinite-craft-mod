@@ -6,6 +6,11 @@ import com.infinite_craft.vehicle.Vehicles;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.block.Blocks;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.ItemEntity;
+import net.minecraft.entity.decoration.ArmorStandEntity;
+import net.minecraft.entity.mob.ZombieEntity;
+import net.minecraft.entity.passive.WolfEntity;
 import net.minecraft.entity.projectile.FireworkRocketEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
@@ -184,6 +189,157 @@ public class VehicleTest {
 		});
 	}
 
+	// --- safety and getting the vehicle back
+
+	@GameTest(maxTicks = 100, skyAccess = true)
+	public void fallDoesNotHurtTankOrRider(TestContext context) {
+		CraftedItemUseTest.floor(context);
+		VehicleEntity vehicle = place(context, TANK, new Vec3d(4.5, 6, 4.5));
+		PlayerEntity player = mount(context, vehicle);
+		context.runAtTick(60, () -> {
+			context.assertTrue(vehicle.isOnGround(), Text.literal("tank never landed"));
+			context.assertTrue(vehicle.getHealth() == vehicle.getMaxHealth(),
+				Text.literal("a 5-block drop hurt the tank: %.1f of %.1f".formatted(vehicle.getHealth(), vehicle.getMaxHealth())));
+			context.assertTrue(player.getHealth() == player.getMaxHealth(),
+				Text.literal("a 5-block drop hurt the rider: %.1f".formatted(player.getHealth())));
+			// getting out after the drop doesn't hurt either
+			player.stopRiding();
+			for (int t = 0; t < 5; t++) CraftedItemUseTest.tick(player);
+			context.assertTrue(player.getHealth() == player.getMaxHealth(),
+				Text.literal("getting out after a drop hurt the rider: %.1f".formatted(player.getHealth())));
+			vehicle.discard();
+			context.complete();
+		});
+	}
+
+	@GameTest(maxTicks = 100, skyAccess = true, structure = LaunchTest.RUNWAY)
+	public void ramHurtsAZombieButNotAPet(TestContext context) {
+		VehicleEntity vehicle = place(context, TANK, START);
+		PlayerEntity player = mount(context, vehicle);
+		ZombieEntity zombie = context.spawnEntity(EntityType.ZOMBIE, new Vec3d(3.5, 1, 12.5));
+		WolfEntity wolf = context.spawnEntity(EntityType.WOLF, new Vec3d(5.5, 1, 12.5));
+		wolf.setTamedBy(player);
+		wolf.setSitting(true);
+		zombie.setAiDisabled(false);
+		context.runAtEveryTick(() -> player.forwardSpeed = 1);
+		context.runAtTick(60, () -> {
+			System.out.printf("[VehicleTest] ram: zombie %.1f of %.1f, pet wolf %.1f of %.1f%n",
+				zombie.getHealth(), zombie.getMaxHealth(), wolf.getHealth(), wolf.getMaxHealth());
+			context.assertTrue(zombie.getHealth() <= zombie.getMaxHealth() - 4,
+				Text.literal("ramming did only %.1f damage to the zombie".formatted(zombie.getMaxHealth() - zombie.getHealth())));
+			context.assertTrue(wolf.getHealth() == wolf.getMaxHealth(), Text.literal("ramming hurt the rider's pet"));
+			vehicle.discard();
+			context.complete();
+		});
+	}
+
+	@GameTest
+	public void neverRamsPlayersPetsOrArmorStands(TestContext context) {
+		CraftedItemUseTest.floor(context);
+		PlayerEntity rider = CraftedItemUseTest.player(context);
+		PlayerEntity someoneElse = CraftedItemUseTest.player(context);
+		WolfEntity pet = context.spawnEntity(EntityType.WOLF, new Vec3d(2.5, 1, 2.5));
+		pet.setTamedBy(rider);
+		ArmorStandEntity stand = context.spawnEntity(EntityType.ARMOR_STAND, new Vec3d(6.5, 1, 2.5));
+		ZombieEntity zombie = context.spawnEntity(EntityType.ZOMBIE, new Vec3d(4.5, 1, 6.5));
+		context.assertFalse(VehicleEntity.isRammable(someoneElse, rider), Text.literal("another player is rammable"));
+		context.assertFalse(VehicleEntity.isRammable(pet, rider), Text.literal("the rider's pet is rammable"));
+		context.assertFalse(VehicleEntity.isRammable(stand, rider), Text.literal("an armor stand is rammable"));
+		context.assertTrue(VehicleEntity.isRammable(zombie, rider), Text.literal("a zombie isn't rammable"));
+		context.complete();
+	}
+
+	@GameTest
+	public void sneakHitPacksItUp(TestContext context) {
+		CraftedItemUseTest.floor(context);
+		VehicleEntity vehicle = place(context, TANK, new Vec3d(4.5, 1, 4.5));
+		vehicle.damage(context.getWorld(), context.getWorld().getDamageSources().generic(), 30);
+		PlayerEntity player = CraftedItemUseTest.player(context);
+		player.setSneaking(true);
+		player.attack(vehicle);
+		context.runAtTick(2, () -> {
+			context.assertTrue(vehicle.isRemoved(), Text.literal("sneak-hitting the tank didn't pack it up"));
+			ItemStack dropped = droppedItem(context);
+			context.assertTrue(dropped != null && dropped.get(Abilities.VEHICLE) != null,
+				Text.literal("packing up dropped no tank item"));
+			// the item carries no damage: placed again it's whole
+			VehicleEntity again = VehicleEntity.place(context.getWorld(), dropped, context.getAbsolute(new Vec3d(4.5, 1, 4.5)), 0);
+			context.assertTrue(again != null && again.getHealth() == again.getMaxHealth(), Text.literal("the re-placed tank isn't repaired"));
+			again.discard();
+			context.complete();
+		});
+	}
+
+	@GameTest(maxTicks = 40)
+	public void destroyedVehicleDropsItsItem(TestContext context) {
+		CraftedItemUseTest.floor(context);
+		VehicleEntity vehicle = place(context, TANK, new Vec3d(4.5, 1, 4.5));
+		ZombieEntity zombie = context.spawnEntity(EntityType.ZOMBIE, new Vec3d(1.5, 1, 1.5));
+		vehicle.damage(context.getWorld(), context.getWorld().getDamageSources().mobAttack(zombie), 1000);
+		context.runAtTick(25, () -> {
+			context.assertTrue(!vehicle.isAlive(), Text.literal("1000 damage didn't destroy the tank"));
+			ItemStack dropped = droppedItem(context);
+			context.assertTrue(dropped != null && dropped.get(Abilities.VEHICLE) != null,
+				Text.literal("the destroyed tank dropped no item"));
+			context.expectBlock(Blocks.STONE, new BlockPos(4, 0, 4));
+			zombie.discard();
+			context.complete();
+		});
+	}
+
+	@GameTest
+	public void riderCannotDamageOwnVehicle(TestContext context) {
+		CraftedItemUseTest.floor(context);
+		VehicleEntity vehicle = place(context, TANK, new Vec3d(4.5, 1, 4.5));
+		PlayerEntity player = mount(context, vehicle);
+		player.attack(vehicle);
+		context.assertTrue(vehicle.getHealth() == vehicle.getMaxHealth() && !vehicle.isRemoved(),
+			Text.literal("the rider damaged their own tank"));
+		vehicle.discard();
+		context.complete();
+	}
+
+	@GameTest(maxTicks = 40)
+	public void dismountNeverSuffocates(TestContext context) {
+		CraftedItemUseTest.floor(context);
+		// a corridor along z just wide enough for the tank, with a low ceiling: there's no room on top of it
+		for (int z = 0; z < 8; z++) {
+			for (int y = 1; y <= 3; y++) {
+				context.setBlockState(new BlockPos(2, y, z), Blocks.STONE);
+				context.setBlockState(new BlockPos(6, y, z), Blocks.STONE);
+			}
+			for (int x = 2; x <= 6; x++) {
+				context.setBlockState(new BlockPos(x, 3, z), Blocks.STONE);
+			}
+		}
+		VehicleEntity vehicle = place(context, TANK, new Vec3d(4.5, 1, 4.0));
+		PlayerEntity player = mount(context, vehicle);
+		player.stopRiding();
+		context.assertTrue(context.getWorld().isSpaceEmpty(player),
+			Text.literal("getting out put the rider inside blocks at " + context.getRelative(player.getEntityPos())));
+		vehicle.discard();
+		context.complete();
+	}
+
+	@GameTest(maxTicks = 440)
+	public void doesNotDrownUnderwater(TestContext context) {
+		CraftedItemUseTest.floor(context);
+		for (int x = 1; x < 8; x++) {
+			for (int z = 1; z < 8; z++) {
+				for (int y = 1; y <= 4; y++) {
+					context.setBlockState(new BlockPos(x, y, z), Blocks.WATER);
+				}
+			}
+		}
+		VehicleEntity vehicle = place(context, TANK, new Vec3d(4.5, 1, 4.5));
+		context.runAtTick(400, () -> {
+			context.assertTrue(vehicle.getHealth() == vehicle.getMaxHealth(),
+				Text.literal("20 s underwater hurt the tank: %.1f".formatted(vehicle.getHealth())));
+			vehicle.discard();
+			context.complete();
+		});
+	}
+
 	// --- helpers
 
 	interface Result {
@@ -194,6 +350,12 @@ public class VehicleTest {
 		VehicleEntity vehicle = VehicleEntity.place(context.getWorld(), ThrustTest.parse(context, nbt), context.getAbsolute(relative), 0);
 		context.assertTrue(vehicle != null, Text.literal("couldn't place the vehicle"));
 		return vehicle;
+	}
+
+	static ItemStack droppedItem(TestContext context) {
+		Box area = new Box(context.getAbsolutePos(BlockPos.ORIGIN)).expand(10);
+		return context.getWorld().getEntitiesByClass(ItemEntity.class, area, item -> true).stream()
+			.map(ItemEntity::getStack).filter(stack -> stack.contains(Abilities.VEHICLE)).findFirst().orElse(null);
 	}
 
 	/** A survival mock player riding the vehicle, looking the way it faces */

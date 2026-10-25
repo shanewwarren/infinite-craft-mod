@@ -89,7 +89,7 @@ public class Blast {
 	}
 
 	/** Mobs a blast may hurt: not the shooter, not their pets, and not armor stands, which break into an item */
-	static boolean isFairGame(Entity entity, @Nullable Entity shooter) {
+	public static boolean isFairGame(Entity entity, @Nullable Entity shooter) {
 		if (!(entity instanceof LivingEntity) || entity instanceof ArmorStandEntity || entity.isSpectator()) {
 			return false;
 		}
