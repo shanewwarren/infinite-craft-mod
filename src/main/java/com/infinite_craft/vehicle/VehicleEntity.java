@@ -219,6 +219,10 @@ public class VehicleEntity extends MobEntity {
 
 	@Override
 	public boolean damage(ServerWorld world, DamageSource source, float amount) {
+		if (isDead() || isRemoved()) {
+			// the wreck lingers for its death animation and has already dropped its item; packing it up would make two
+			return false;
+		}
 		Entity attacker = source.getAttacker();
 		if (attacker != null && hasPassenger(attacker)) {
 			// its rider's punches and its own shells
@@ -247,7 +251,8 @@ public class VehicleEntity extends MobEntity {
 
 	@Override
 	public Vec3d updatePassengerForDismount(LivingEntity passenger) {
-		// beside it, then in front and behind; on top only if there's no room anywhere else
+		// beside it, then in front and behind, then where it stands (a vehicle isn't solid);
+		// on top only if there's no room anywhere else
 		for (float side : new float[] {90, -90, 0, 180}) {
 			Vec3d offset = getPassengerDismountOffset(getWidth(), passenger.getWidth(), getYaw() + side);
 			Vec3d spot = safeDismountSpot(offset, passenger);
@@ -255,7 +260,8 @@ public class VehicleEntity extends MobEntity {
 				return spot;
 			}
 		}
-		return super.updatePassengerForDismount(passenger);
+		Vec3d underneath = safeDismountSpot(Vec3d.ZERO, passenger);
+		return underneath != null ? underneath : super.updatePassengerForDismount(passenger);
 	}
 
 	/** The lowest spot at that offset where the passenger fits standing on something, as horses do */
@@ -284,6 +290,12 @@ public class VehicleEntity extends MobEntity {
 
 	@Override
 	public boolean isPushable() {
+		return false;
+	}
+
+	@Override
+	public boolean isPushedByFluids() {
+		// a tank parked in a river stays where it was left
 		return false;
 	}
 

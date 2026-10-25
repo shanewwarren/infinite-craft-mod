@@ -441,6 +441,102 @@ public class VehicleTest {
 		});
 	}
 
+	// --- found in review
+
+	@GameTest(maxTicks = 40)
+	public void sneakHitOnAWreckGivesNoSecondItem(TestContext context) {
+		CraftedItemUseTest.floor(context);
+		VehicleEntity vehicle = place(context, TANK, new Vec3d(4.5, 1, 4.5));
+		ZombieEntity zombie = context.spawnEntity(EntityType.ZOMBIE, new Vec3d(1.5, 1, 1.5));
+		vehicle.damage(context.getWorld(), context.getWorld().getDamageSources().mobAttack(zombie), 1000);
+		// the wreck stays around for its death animation; punching it then must not pack up a second tank
+		PlayerEntity player = CraftedItemUseTest.player(context);
+		player.setSneaking(true);
+		context.runAtTick(2, () -> player.attack(vehicle));
+		context.runAtTick(30, () -> {
+			Box area = new Box(context.getAbsolutePos(BlockPos.ORIGIN)).expand(10);
+			long tanks = context.getWorld().getEntitiesByClass(ItemEntity.class, area, item -> item.getStack().contains(Abilities.VEHICLE)).size();
+			context.assertTrue(tanks == 1, Text.literal("a destroyed tank gave %d items".formatted(tanks)));
+			zombie.discard();
+			context.complete();
+		});
+	}
+
+	@GameTest(maxTicks = 140)
+	public void parkedVehicleStaysPutInFlowingWater(TestContext context) {
+		CraftedItemUseTest.floor(context);
+		// water flows from a row of sources at z = 0 down the floor
+		for (int x = 0; x < 8; x++) {
+			context.setBlockState(new BlockPos(x, 1, 0), Blocks.WATER);
+		}
+		VehicleEntity vehicle = place(context, TANK, new Vec3d(4.5, 1, 3.5));
+		Vec3d start = vehicle.getEntityPos();
+		context.runAtTick(120, () -> {
+			double drift = vehicle.getEntityPos().subtract(start).horizontalLength();
+			System.out.printf("[VehicleTest] parked in flowing water: drifted %.2f blocks in 6 s%n", drift);
+			context.assertTrue(drift < 0.3, Text.literal("the current carried the parked tank %.2f blocks".formatted(drift)));
+			vehicle.discard();
+			context.complete();
+		});
+	}
+
+	@GameTest(maxTicks = 60)
+	public void riderUnhurtUnderALowCeiling(TestContext context) {
+		CraftedItemUseTest.floor(context);
+		// a 2-high space: the tank fits, the rider's head is in the ceiling
+		for (int x = 0; x < 8; x++) {
+			for (int z = 0; z < 8; z++) {
+				context.setBlockState(new BlockPos(x, 3, z), Blocks.STONE);
+			}
+		}
+		VehicleEntity vehicle = place(context, TANK, new Vec3d(4.5, 1, 4.5));
+		PlayerEntity player = mount(context, vehicle);
+		context.runAtTick(40, () -> {
+			context.assertTrue(player.getHealth() == player.getMaxHealth(),
+				Text.literal("riding under a 2-high ceiling hurt the rider: %.1f".formatted(player.getHealth())));
+			vehicle.discard();
+			context.complete();
+		});
+	}
+
+	@GameTest(maxTicks = 40)
+	public void dismountWhenBoxedInStaysOutOfTheCeiling(TestContext context) {
+		CraftedItemUseTest.floor(context);
+		// walls close on every side and a ceiling with no room on top: the only free spot is where the tank stands
+		for (int x = 2; x <= 6; x++) {
+			for (int z = 2; z <= 6; z++) {
+				boolean wall = x == 2 || x == 6 || z == 2 || z == 6;
+				for (int y = 1; y <= 4; y++) {
+					if (wall || y == 4) context.setBlockState(new BlockPos(x, y, z), Blocks.STONE);
+				}
+			}
+		}
+		VehicleEntity vehicle = place(context, TANK, new Vec3d(4.5, 1, 4.5));
+		PlayerEntity player = mount(context, vehicle);
+		player.stopRiding();
+		context.assertTrue(context.getWorld().isSpaceEmpty(player),
+			Text.literal("getting out boxed in put the rider inside blocks at " + context.getRelative(player.getEntityPos())));
+		vehicle.discard();
+		context.complete();
+	}
+
+	@GameTest
+	public void rightClickFiresOnlyWhenThereIsAGun(TestContext context) {
+		CraftedItemUseTest.floor(context);
+		VehicleEntity tank = place(context, TANK, new Vec3d(2.5, 1, 4.5));
+		PlayerEntity tankDriver = mount(context, tank);
+		VehicleEntity car = place(context, CAR, new Vec3d(6.5, 1, 4.5));
+		PlayerEntity carDriver = mount(context, car);
+		PlayerEntity walker = CraftedItemUseTest.player(context);
+		context.assertTrue(VehicleFire.takesRightClick(tankDriver), Text.literal("a tank driver's right click doesn't fire"));
+		// a car with no gun leaves right click alone, so its driver can eat and drink
+		context.assertFalse(VehicleFire.takesRightClick(carDriver), Text.literal("a gunless car takes its driver's right click"));
+		context.assertFalse(VehicleFire.takesRightClick(walker), Text.literal("someone on foot has right click taken"));
+		tank.discard();
+		car.discard();
+		context.complete();
+	}
+
 	// --- helpers
 
 	interface Result {

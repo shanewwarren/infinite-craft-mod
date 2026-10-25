@@ -21,6 +21,15 @@ public class VehicleFire {
 		ServerPlayNetworking.registerGlobalReceiver(FireVehicleC2SPayload.ID, (payload, context) -> fire(context.player()));
 	}
 
+	/**
+	 * Whether the player's right click fires a vehicle's gun instead of its usual use: they're driving one that has a gun.
+	 * A gunless car leaves right click alone, so its driver can still eat and drink
+	 */
+	public static boolean takesRightClick(PlayerEntity player) {
+		return player.getVehicle() instanceof VehicleEntity vehicle && vehicle.getControllingPassenger() == player
+			&& vehicle.getItem().contains(Abilities.SHOOT);
+	}
+
 	/** True if a shot went off: not when the rider isn't driving, the vehicle has no gun, or it's reloading */
 	public static boolean fire(PlayerEntity rider) {
 		if (!(rider.getVehicle() instanceof VehicleEntity vehicle) || vehicle.getControllingPassenger() != rider) {

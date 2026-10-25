@@ -2,9 +2,11 @@ package com.infinite_craft.vehicle;
 
 import com.infinite_craft.InfiniteCraft;
 
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnGroup;
+import net.minecraft.entity.damage.DamageTypes;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
@@ -27,5 +29,8 @@ public class Vehicles {
 	public static void initialize() {
 		FabricDefaultAttributeRegistry.register(VEHICLE, VehicleEntity.createVehicleAttributes());
 		VehicleFire.initialize();
+		// the rider sits above the hull, so under a 2-high ceiling their head is in it while the vehicle still fits
+		ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) ->
+			!(source.isOf(DamageTypes.IN_WALL) && entity.getVehicle() instanceof VehicleEntity));
 	}
 }
