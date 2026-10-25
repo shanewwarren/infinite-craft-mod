@@ -1,6 +1,7 @@
 package com.infinite_craft.test;
 
 import com.infinite_craft.ability.Abilities;
+import com.infinite_craft.ai.AiPrompt;
 import com.infinite_craft.vehicle.VehicleEntity;
 import com.infinite_craft.vehicle.VehicleFire;
 import com.infinite_craft.vehicle.Vehicles;
@@ -423,6 +424,20 @@ public class VehicleTest {
 			}
 			vehicle.discard();
 			context.complete();
+		});
+	}
+
+	// --- the prompt's example
+
+	@GameTest(maxTicks = 80, skyAccess = true, structure = LaunchTest.RUNWAY)
+	public void promptTankDrivesAndFires(TestContext context) {
+		String tank = AiPrompt.POWER_EXAMPLES.stream().filter(e -> e.contains("infinite_craft:vehicle")).findFirst().orElse(null);
+		context.assertTrue(tank != null, Text.literal("the prompt has no vehicle example"));
+		drive(context, tank, 60, 1, 0, (vehicle, player, start) -> {
+			double distance = vehicle.getEntityPos().subtract(start).horizontalLength();
+			System.out.printf("[VehicleTest] the prompt's %s drove %.1f blocks in 3 s%n", vehicle.getItem().getName().getString(), distance);
+			context.assertTrue(distance >= 10, Text.literal("the prompt's tank drove only %.1f blocks in 3 s".formatted(distance)));
+			context.assertTrue(VehicleFire.fire(player), Text.literal("the prompt's tank didn't fire"));
 		});
 	}
 

@@ -206,6 +206,9 @@ public class AiPrompt {
 		// explosive launcher: rockets fly visibly and blow up mobs where they land
 		"""
 		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:rocket_launcher","minecraft:item_name":{text:"Rocket Launcher",color:"dark_green"},"minecraft:max_stack_size":1,"infinite_craft:shoot":{kind:"rocket",damage:8.0f,explode:3.0f,interval:30}}}""",
+		// vehicle: placed on the ground and driven; its shoot is the tank's gun
+		"""
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:tank","minecraft:item_name":{text:"Tank",color:"dark_green"},"minecraft:max_stack_size":1,"infinite_craft:vehicle":{body:"tank",speed:6.0f,health:120.0f,color:"#556B2F"},"infinite_craft:shoot":{kind:"rocket",damage:10.0f,explode:3.0f,interval:30}}}""",
 		// melee weapon that also calls lightning on right click
 		"""
 		{id:"minecraft:mace",count:1i,components:{"minecraft:item_name":{text:"Thor's Hammer",color:"aqua"},"minecraft:enchantments":{"minecraft:wind_burst":1},"infinite_craft:shoot":{kind:"beam",damage:6.0f,color:"aqua",interval:30,lightning:true}}}""",
@@ -284,6 +287,14 @@ public class AiPrompt {
 			\t\t\tWhile it is worn, holding jump flies up and holding forward zooms ahead. Fields: power (lift, 1 climbs about 7 blocks a second), speed (forward boost, 0 to 3).
 			\t\t\tAdd a safe_fall_distance modifier so landing doesn't hurt. For a jetpack worn on the back, give equippable asset_id:"infinite_craft:jetpack" so players see it.
 			\t\tGliding (wings, hang gliders): "minecraft:glider" with an equippable chest slot, or a minecraft:elytra base. Don't put glider and thrust on the same item.
+			\t\tVehicles you ride (tanks, cars, race cars, trucks, jeeps, go-karts, monster trucks): "infinite_craft:vehicle", this mod's component.
+			\t\t\tUsing the item on the ground places the vehicle; the player right-clicks it to climb in, drives with W and S, steers with A and D, and gets out with shift.
+			\t\t\tFields: body ("tank": turns in place and its turret aims where the player looks; "car": steers while moving, for anything on wheels),
+			\t\t\tspeed (blocks per second; running is about 5.6: a tank 5 to 8, a car 10 to 14, a race car up to 18), health (a tank 100 to 200, a car 30 to 60),
+			\t\t\tcolor (paint color, a color name or "#RRGGBB"), size (0.5 a mini, 1 normal, 2 a giant mega tank).
+			\t\t\tIts gun is "infinite_craft:shoot" on the same item: it fires from the barrel while the driver holds right click, never from the hand.
+			\t\t\tA tank gets rockets with explode 3 and interval 30 or more; a car usually has no gun, or bullets for a battle car.
+			\t\t\tUse "minecraft:item_model":"infinite_craft:tank" or "infinite_craft:race_car", and max_stack_size 1. Only ground vehicles exist: for planes or boats make something that flies (thrust, glider) instead.
 			\t\tTools: "minecraft:tool" with mining rules
 			\t\tMagic gadgets: a "minecraft:consumable" effect plus "minecraft:use_cooldown"; consumables are used up, so give several (count 2-8)
 			\t\tSaving the player from death: "minecraft:death_protection" (works like a totem, but ONLY while held in a hand, never on armor)
