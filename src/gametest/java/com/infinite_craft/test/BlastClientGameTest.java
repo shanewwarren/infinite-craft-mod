@@ -26,6 +26,7 @@ public class BlastClientGameTest implements FabricClientGameTest {
 
 	@Override
 	public void runTest(ClientGameTestContext context) {
+		if (ClientTestFilter.skip(getClass())) return;
 		try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
 			singleplayer.getClientWorld().waitForChunksRender();
 			TestServerContext server = singleplayer.getServer();
