@@ -54,6 +54,10 @@ public class VehicleEntity extends MobEntity {
 	/** -0.5 (reversing) to 1 (full ahead), ramped toward what the rider holds */
 	private float throttle;
 
+	// where the gun sits at size 1: the turret's middle, and how far out the barrel tip is from there
+	private static final double TURRET_HEIGHT = 1.15;
+	private static final double BARREL_LENGTH = 2.2;
+
 	// ramming: at least this fast, in blocks per second
 	private static final double RAM_SPEED = 3;
 	private @Nullable Vec3d lastTickPos;
@@ -111,6 +115,13 @@ public class VehicleEntity extends MobEntity {
 
 	public VehicleComponent vehicle() {
 		return dataTracker.get(ITEM).getOrDefault(Abilities.VEHICLE, VehicleComponent.DEFAULT);
+	}
+
+	/** Where shots leave the barrel, for an aim: out from the turret, clear of the hull */
+	public Vec3d muzzle(float pitch, float yaw) {
+		float scale = getScale();
+		Vec3d turret = getEntityPos().add(0, TURRET_HEIGHT * scale, 0);
+		return turret.add(Vec3d.fromPolar(pitch, yaw).multiply(BARREL_LENGTH * scale));
 	}
 
 	public float throttle() {

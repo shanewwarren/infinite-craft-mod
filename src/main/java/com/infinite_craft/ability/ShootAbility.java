@@ -52,6 +52,14 @@ public class ShootAbility {
 	private static final Map<PlayerEntity, Integer> serverLastShot = Collections.synchronizedMap(new WeakHashMap<>());
 
 	public static ActionResult use(World world, PlayerEntity user, Hand hand, ItemStack stack, ShootComponent shoot) {
+		return fire(world, user, stack, shoot, user.getEyePos());
+	}
+
+	/**
+	 * Fires the gun's shots from `from` the way the user looks: their eyes for a hand-held gun, a barrel tip for a vehicle.
+	 * Returns CONSUME while the gun is still reloading
+	 */
+	public static ActionResult fire(World world, PlayerEntity user, ItemStack stack, ShootComponent shoot, Vec3d from) {
 		Map<PlayerEntity, Integer> lastShot = world.isClient() ? clientLastShot : serverLastShot;
 		Integer last = lastShot.get(user);
 		if (last != null && user.age - last >= 0 && user.age - last < shoot.interval()) {
@@ -63,9 +71,9 @@ public class ShootAbility {
 		if (world instanceof ServerWorld serverWorld) {
 			for (int i = 0; i < shoot.count(); i++) {
 				switch (shoot.kind()) {
-					case BEAM -> fireBeam(serverWorld, user, stack, shoot);
-					case BULLET -> fireBullet(serverWorld, user, stack, shoot);
-					case ROCKET -> fireRocket(serverWorld, user, shoot);
+					case BEAM -> fireBeam(serverWorld, user, shoot, from);
+					case BULLET -> fireBullet(serverWorld, user, stack, shoot, from);
+					case ROCKET -> fireRocket(serverWorld, user, shoot, from);
 				}
 			}
 			SoundEvent sound = shoot.sound().map(entry -> entry.value()).orElse(switch (shoot.kind()) {
@@ -83,8 +91,7 @@ public class ShootAbility {
 		return ActionResult.SUCCESS;
 	}
 
-	private static void fireBeam(ServerWorld world, PlayerEntity user, ItemStack stack, ShootComponent shoot) {
-		Vec3d start = user.getEyePos();
+	private static void fireBeam(ServerWorld world, PlayerEntity user, ShootComponent shoot, Vec3d start) {
 		Vec3d direction = aim(user, shoot.spread());
 		Vec3d end = start.add(direction.multiply(BEAM_RANGE));
 
@@ -93,7 +100,7 @@ public class ShootAbility {
 			end = blockHit.getPos();
 		}
 		EntityHitResult entityHit = ProjectileUtil.raycast(user, start, end, user.getBoundingBox().stretch(end.subtract(start)).expand(1),
-			entity -> !entity.isSpectator() && entity.canHit(), start.squaredDistanceTo(end));
+			entity -> !entity.isSpectator() && entity.canHit() && entity != user.getVehicle(), start.squaredDistanceTo(end));
 		if (entityHit != null) {
 			end = entityHit.getPos();
 			hit(world, user, entityHit.getEntity(), shoot);
@@ -104,8 +111,8 @@ public class ShootAbility {
 
 		DustParticleEffect dust = new DustParticleEffect(shoot.color(), 1.0f);
 		double length = start.distanceTo(end);
-		// start in front of the eyes so the beam doesn't fill the shooter's view
-		for (double d = 1.5; d < length; d += 0.4) {
+		// start in front of the eyes so the beam doesn't fill the shooter's view; a barrel tip is already out in front
+		for (double d = user.getEyePos().equals(start) ? 1.5 : 0; d < length; d += 0.4) {
 			Vec3d p = start.add(direction.multiply(d));
 			world.spawnParticles(dust, p.x, p.y - 0.15, p.z, 1, 0, 0, 0, 0);
 		}
@@ -122,8 +129,11 @@ public class ShootAbility {
 		target.damage(world, user.getDamageSources().playerAttack(user), shoot.damage());
 	}
 
-	private static void fireBullet(ServerWorld world, PlayerEntity user, ItemStack stack, ShootComponent shoot) {
+	private static void fireBullet(ServerWorld world, PlayerEntity user, ItemStack stack, ShootComponent shoot, Vec3d from) {
 		ArrowEntity bullet = new ArrowEntity(world, user, new ItemStack(Items.ARROW), stack.copyWithCount(1));
+		if (!user.getEyePos().equals(from)) {
+			bullet.setPosition(from);
+		}
 		bullet.pickupType = PersistentProjectileEntity.PickupPermission.DISALLOWED;
 		bullet.addCommandTag(BULLET_TAG);
 		// arrows deal speed × damage, rounded up, and fly a little faster or slower than BULLET_SPEED
@@ -135,16 +145,17 @@ public class ShootAbility {
 		}
 		world.spawnEntity(bullet);
 
-		Vec3d muzzle = user.getEyePos().add(user.getRotationVector().multiply(1.2));
+		Vec3d muzzle = user.getEyePos().equals(from) ? from.add(user.getRotationVector().multiply(1.2)) : from;
 		world.spawnParticles(new DustParticleEffect(shoot.color(), 0.6f), muzzle.x, muzzle.y - 0.15, muzzle.z, 3, 0.05, 0.05, 0.05, 0);
 	}
 
 	/** A firework that flies straight and carries the gun's settings in its item, so a saved world keeps them */
-	private static void fireRocket(ServerWorld world, PlayerEntity user, ShootComponent shoot) {
+	private static void fireRocket(ServerWorld world, PlayerEntity user, ShootComponent shoot, Vec3d from) {
 		ItemStack rocketItem = new ItemStack(Items.FIREWORK_ROCKET);
 		rocketItem.set(DataComponentTypes.FIREWORKS, new FireworksComponent(2, List.of()));
 		rocketItem.set(Abilities.SHOOT, shoot);
-		FireworkRocketEntity rocket = new FireworkRocketEntity(world, rocketItem, user, user.getX(), user.getEyeY() - 0.15, user.getZ(), true);
+		Vec3d start = user.getEyePos().equals(from) ? from.subtract(0, 0.15, 0) : from;
+		FireworkRocketEntity rocket = new FireworkRocketEntity(world, rocketItem, user, start.x, start.y, start.z, true);
 		rocket.setVelocity(user, user.getPitch(), user.getYaw(), 0, ROCKET_SPEED, shoot.spread());
 		world.spawnEntity(rocket);
 	}

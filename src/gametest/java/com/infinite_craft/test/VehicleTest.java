@@ -2,6 +2,7 @@ package com.infinite_craft.test;
 
 import com.infinite_craft.ability.Abilities;
 import com.infinite_craft.vehicle.VehicleEntity;
+import com.infinite_craft.vehicle.VehicleFire;
 import com.infinite_craft.vehicle.Vehicles;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
@@ -9,6 +10,7 @@ import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.decoration.ArmorStandEntity;
+import net.minecraft.entity.mob.HuskEntity;
 import net.minecraft.entity.mob.ZombieEntity;
 import net.minecraft.entity.passive.WolfEntity;
 import net.minecraft.entity.projectile.FireworkRocketEntity;
@@ -183,7 +185,7 @@ public class VehicleTest {
 		context.assertTrue(result == ActionResult.PASS, Text.literal("using the tank item in the air gave " + result));
 		context.runAtTick(5, () -> {
 			Box around = player.getBoundingBox().expand(16);
-			context.assertTrue(context.getWorld().getEntitiesByClass(FireworkRocketEntity.class, around, r -> true).isEmpty(),
+			context.assertTrue(context.getWorld().getEntitiesByClass(FireworkRocketEntity.class, around, r -> r.getOwner() == player).isEmpty(),
 				Text.literal("the tank item fired a rocket from the hand"));
 			context.complete();
 		});
@@ -213,20 +215,21 @@ public class VehicleTest {
 	}
 
 	@GameTest(maxTicks = 100, skyAccess = true, structure = LaunchTest.RUNWAY)
-	public void ramHurtsAZombieButNotAPet(TestContext context) {
+	public void ramHurtsAMobButNotAPet(TestContext context) {
 		VehicleEntity vehicle = place(context, TANK, START);
 		PlayerEntity player = mount(context, vehicle);
-		ZombieEntity zombie = context.spawnEntity(EntityType.ZOMBIE, new Vec3d(3.5, 1, 12.5));
+		// a husk doesn't burn in daylight, and without AI it can't wander out of the way
+		HuskEntity zombie = context.spawnEntity(EntityType.HUSK, new Vec3d(3.5, 1, 12.5));
 		WolfEntity wolf = context.spawnEntity(EntityType.WOLF, new Vec3d(5.5, 1, 12.5));
 		wolf.setTamedBy(player);
 		wolf.setSitting(true);
-		zombie.setAiDisabled(false);
+		zombie.setAiDisabled(true);
 		context.runAtEveryTick(() -> player.forwardSpeed = 1);
 		context.runAtTick(60, () -> {
-			System.out.printf("[VehicleTest] ram: zombie %.1f of %.1f, pet wolf %.1f of %.1f%n",
+			System.out.printf("[VehicleTest] ram: husk %.1f of %.1f, pet wolf %.1f of %.1f%n",
 				zombie.getHealth(), zombie.getMaxHealth(), wolf.getHealth(), wolf.getMaxHealth());
 			context.assertTrue(zombie.getHealth() <= zombie.getMaxHealth() - 4,
-				Text.literal("ramming did only %.1f damage to the zombie".formatted(zombie.getMaxHealth() - zombie.getHealth())));
+				Text.literal("ramming did only %.1f damage to the husk".formatted(zombie.getMaxHealth() - zombie.getHealth())));
 			context.assertTrue(wolf.getHealth() == wolf.getMaxHealth(), Text.literal("ramming hurt the rider's pet"));
 			vehicle.discard();
 			context.complete();
@@ -335,6 +338,89 @@ public class VehicleTest {
 		context.runAtTick(400, () -> {
 			context.assertTrue(vehicle.getHealth() == vehicle.getMaxHealth(),
 				Text.literal("20 s underwater hurt the tank: %.1f".formatted(vehicle.getHealth())));
+			vehicle.discard();
+			context.complete();
+		});
+	}
+
+	// --- firing from the vehicle
+
+	@GameTest(maxTicks = 60, skyAccess = true, structure = LaunchTest.RUNWAY)
+	public void tankFiresRocketsFromTheBarrel(TestContext context) {
+		VehicleEntity vehicle = place(context, TANK, START);
+		PlayerEntity player = mount(context, vehicle);
+		HuskEntity husk = context.spawnEntity(EntityType.HUSK, new Vec3d(4.5, 1, 16.5));
+		husk.setAiDisabled(true);
+		Vec3d muzzle = vehicle.muzzle(player.getPitch(), player.getHeadYaw());
+		context.assertTrue(VehicleFire.fire(player), Text.literal("the tank didn't fire"));
+		Box nearMuzzle = Box.of(muzzle, 1, 1, 1);
+		context.assertTrue(!context.getWorld().getEntitiesByClass(FireworkRocketEntity.class, nearMuzzle, r -> true).isEmpty(),
+			Text.literal("no rocket at the barrel tip " + muzzle));
+		context.runAtTick(40, () -> {
+			context.assertTrue(husk.getHealth() < husk.getMaxHealth(), Text.literal("the tank's rocket missed the husk 15 blocks ahead"));
+			husk.discard();
+			vehicle.discard();
+			context.complete();
+		});
+	}
+
+	@GameTest(maxTicks = 60, skyAccess = true, structure = LaunchTest.RUNWAY)
+	public void pointBlankShellSparesTheTank(TestContext context) {
+		pointBlank(context, true);
+	}
+
+	@GameTest(maxTicks = 60, skyAccess = true, structure = LaunchTest.RUNWAY, environment = "infinite-craft-test:blasts_keep_blocks")
+	public void pointBlankShellKeepsBlocksWithGameruleOff(TestContext context) {
+		pointBlank(context, false);
+	}
+
+	@GameTest
+	public void onlyTheDriverCanFire(TestContext context) {
+		CraftedItemUseTest.floor(context);
+		place(context, TANK, new Vec3d(4.5, 1, 4.5));
+		PlayerEntity walker = CraftedItemUseTest.player(context);
+		context.assertFalse(VehicleFire.fire(walker), Text.literal("a player who isn't riding fired a tank"));
+		context.getWorld().getEntitiesByClass(VehicleEntity.class, new Box(context.getAbsolutePos(BlockPos.ORIGIN)).expand(10), v -> true)
+			.forEach(VehicleEntity::discard);
+		context.complete();
+	}
+
+	@GameTest
+	public void carWithoutGunFiresNothing(TestContext context) {
+		CraftedItemUseTest.floor(context);
+		VehicleEntity car = place(context, CAR, new Vec3d(4.5, 1, 4.5));
+		PlayerEntity player = mount(context, car);
+		context.assertFalse(VehicleFire.fire(player), Text.literal("a car with no gun fired"));
+		car.discard();
+		context.complete();
+	}
+
+	/** Fires at a 5-wide, 3-high plank wall 3 blocks in front of the tank */
+	private static void pointBlank(TestContext context, boolean blocksBreak) {
+		VehicleEntity vehicle = place(context, TANK, START);
+		PlayerEntity player = mount(context, vehicle);
+		for (int x = 2; x <= 6; x++) {
+			for (int y = 1; y <= 3; y++) {
+				context.setBlockState(new BlockPos(x, y, 6), Blocks.OAK_PLANKS);
+			}
+		}
+		context.assertTrue(VehicleFire.fire(player), Text.literal("the tank didn't fire"));
+		context.runAtTick(30, () -> {
+			int left = 0;
+			for (int x = 2; x <= 6; x++) {
+				for (int y = 1; y <= 3; y++) {
+					if (context.getBlockState(new BlockPos(x, y, 6)).isOf(Blocks.OAK_PLANKS)) left++;
+				}
+			}
+			System.out.printf("[VehicleTest] point-blank shell: tank %.1f of %.1f, %d of 15 wall blocks left%n",
+				vehicle.getHealth(), vehicle.getMaxHealth(), left);
+			context.assertTrue(vehicle.getHealth() == vehicle.getMaxHealth(),
+				Text.literal("its own shell hurt the tank: %.1f of %.1f".formatted(vehicle.getHealth(), vehicle.getMaxHealth())));
+			if (blocksBreak) {
+				context.assertTrue(left < 15, Text.literal("the shell broke no blocks"));
+			} else {
+				context.assertTrue(left == 15, Text.literal("with the gamerule off the shell broke %d blocks".formatted(15 - left)));
+			}
 			vehicle.discard();
 			context.complete();
 		});

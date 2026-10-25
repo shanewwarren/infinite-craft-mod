@@ -26,5 +26,6 @@ public class Vehicles {
 
 	public static void initialize() {
 		FabricDefaultAttributeRegistry.register(VEHICLE, VehicleEntity.createVehicleAttributes());
+		VehicleFire.initialize();
 	}
 }
