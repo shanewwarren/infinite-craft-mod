@@ -68,7 +68,8 @@ public class Claude {
 		return builder.build();
 	}
 
-	public void logUsage(BetaMessage response){
+	/** Logs the tokens and returns what the craft cost in dollars */
+	public double logUsage(BetaMessage response){
 		long input = response.usage().inputTokens();
 		long output = response.usage().outputTokens();
 		double[] price = PRICES.getOrDefault(response.model().asString(), PRICES.get(model));
@@ -80,6 +81,7 @@ public class Claude {
 				response.model().asString(), input, output,
 				"%.4f".formatted(cost), sessionCrafts, "%.4f".formatted(sessionCost));
 		}
+		return cost;
 	}
 
 	public synchronized double getSessionCost(){

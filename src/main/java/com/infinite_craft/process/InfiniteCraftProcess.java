@@ -3,16 +3,18 @@ package com.infinite_craft.process;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 import java.util.Optional;
 
 import com.google.gson.JsonObject;
 import com.infinite_craft.InfiniteCraft;
 import com.infinite_craft.ai.AiPrompt;
-import com.infinite_craft.element.ElementComponentType;
 import com.infinite_craft.element.ElementData;
 import com.infinite_craft.element.ElementItems;
-import com.infinite_craft.element.PlayerEntityExt;
 import com.infinite_craft.element.globaldata.GlobalDiscoveringDataManager;
+import com.infinite_craft.playtest.CraftResults;
+import com.infinite_craft.playtest.PlaytestLog;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
 import net.minecraft.entity.ItemEntity;
@@ -30,8 +32,6 @@ import net.minecraft.screen.slot.Slot;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.HoverEvent;
-import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextColor;
@@ -72,6 +72,7 @@ public class InfiniteCraftProcess {
         final int finalMinInputItemStack=minInputItemStack;
         String playerName = player.getGameProfile().name();
         new Thread(() -> {
+            long started = System.currentTimeMillis();
             try {
                 int exceptedTryCraftTicks = exceptedTryCraftTicksF;
                 double progressStart=0;
@@ -84,51 +85,20 @@ public class InfiniteCraftProcess {
                 String prompt = AiPrompt.GeneratePrompt(usedItem, gridSize);
 
                 // 🌐 3. Ask
-                ItemStack response = postWithRetry(prompt, player, 3, loadingState, exceptedTryCraftTicks);
+                CraftReply reply = postWithRetry(prompt, player, 3, loadingState, exceptedTryCraftTicks);
 
                 // 🎁 4. Send Result
                 loadingState.complete(5);
-                if (response != null) {
-                    InfiniteCraft.LOGGER.info("Request Result:\n{}", response.toString());
-                    if (!response.isEmpty()) {
-                        server.execute(() -> { // 回到主线程
-                            for (int i = 0; i < finalMinInputItemStack; i++) {
-                                if (player != null && player.isAlive()) {
-                                    player.sendMessage(Text.translatableWithFallback("chat.message.infinite_craft.craft.success","Crafted: ")
-                                        .setStyle(
-                                            Style.EMPTY.withColor(TextColor.parse("lime").result().orElse(TextColor.fromRgb(0xbfff00)))
-                                        )
-                                        .append(
-                                            DescribeItemStack(response)
-                                            .setStyle(
-                                                Style.EMPTY.withColor(TextColor.parse("white").result().orElse(TextColor.fromRgb(0xffffff)))
-                                            )
-                                        ),
-                                    false);
-                                    ItemStack copiedItemStack = response.copy();
-                                    if(ElementData.isElement(copiedItemStack)){
-                                        ElementComponentType elementComponentType = ElementData.fromItem(copiedItemStack).get().generateElementComponent();
-                                        ((PlayerEntityExt)player).getDiscoveringData().add(elementComponentType);
-                                        GlobalDiscoveringDataManager.get(server).getDiscovered().add(elementComponentType);
-                                    }
-                                    if (!player.getInventory().insertStack(copiedItemStack)) {
-                                        player.dropItem(copiedItemStack, false);
-                                    }
-                                } else {
-                                    ServerWorld world = dimension;
-                                    if (world != null) {
-                                        ItemStack copiedItemStack = response.copy();
-                                        ItemEntity entity = new ItemEntity(world,
-                                                pos.getX() + 0.5, pos.getY() + 1, pos.getZ() + 0.5,
-                                                copiedItemStack);
-                                        world.spawnEntity(entity);
-                                    }
-                                }
-                            }
-                        });
+                List<PlaytestLog.Input> loggedInputs = CraftResults.inputs(usedItem);
+                if (reply.stack() != null) {
+                    InfiniteCraft.LOGGER.info("Request Result:\n{}", reply.stack().toString());
+                    if (!reply.stack().isEmpty()) {
+                        CraftResults.Meta meta = new CraftResults.Meta(loggedInputs, System.currentTimeMillis() - started, reply.costUsd(), reply.verdict());
+                        server.execute(() -> CraftResults.deliver(player, dimension, pos, reply.stack(), finalMinInputItemStack, meta));
                     }
                 } else {
                     InfiniteCraft.LOGGER.info("Request Failed\n");
+                    PlaytestLog.craftFailed(playerName, loggedInputs, reply.error());
                     server.execute(() -> {
                         for(ItemStack result : usedItem){
                             if(result!=null && !result.isEmpty()){
@@ -138,7 +108,7 @@ public class InfiniteCraftProcess {
                                             Style.EMPTY.withColor(TextColor.parse("lime").result().orElse(TextColor.fromRgb(0xbfff00)))
                                         )
                                         .append(
-                                            DescribeItemStack(result)
+                                            CraftResults.describe(result)
                                             .setStyle(
                                                 Style.EMPTY.withColor(TextColor.parse("white").result().orElse(TextColor.fromRgb(0xffffff)))
                                             )
@@ -167,24 +137,35 @@ public class InfiniteCraftProcess {
     }
 
     /**
+     * What came back: stack is null when every try failed, with the last error. cost adds up every try's tokens,
+     * verdict is clean, element, or "partial: ..." when Minecraft dropped some of the components
+     */
+    record CraftReply(ItemStack stack, double costUsd, String verdict, String error) {}
+
+    /**
      * Ask Ai and return a item stack
      */
-    private static ItemStack postWithRetry(String prompt, ServerPlayerEntity player, int maxRetries, LoadingState loadingState, int exceptedTryCraftTicks) {
+    private static CraftReply postWithRetry(String prompt, ServerPlayerEntity player, int maxRetries, LoadingState loadingState, int exceptedTryCraftTicks) {
+        double cost = 0;
+        String error = "no tries";
         for (int i = 0; i < maxRetries; i++) {
             loadingState.newLoadingProcess(exceptedTryCraftTicks);
             try {
                 JsonObject response = AiApi.doPost(prompt, player);
+                if (response.has("costUsd")) cost += response.get("costUsd").getAsDouble();
                 InfiniteCraft.LOGGER.info("API Response:\n{}", response.toString());
                 if (response.has("success") && response.has("itemNbt")) {
-                    if(response.get("success").getAsBoolean()==false) return null;
+                    if(response.get("success").getAsBoolean()==false) return new CraftReply(null, cost, null, "the AI said nothing can be crafted from this");
                     try {
                         String nbtString = response.get("itemNbt").getAsString();
                         InfiniteCraft.LOGGER.info("Item NBT:\n"+nbtString);
                         if(!response.has("element")){
-                            return parseItemStackFromNbt(nbtString, player.getRegistryManager());
+                            String[] dropped = {null};
+                            ItemStack stack = parseItemStackFromNbt(nbtString, player.getRegistryManager(), problem -> dropped[0] = problem);
+                            return new CraftReply(stack, cost, dropped[0] == null ? "clean" : "partial: " + dropped[0], null);
                         } else {
                             JsonObject elementData = response.get("element").getAsJsonObject();
-                            return ElementItems.generateElement(new ElementData(
+                            return new CraftReply(ElementItems.generateElement(new ElementData(
                                     elementData.get("emoji").getAsString().replaceAll("\uFE0F", ""),
                                     elementData.get("name").getAsString(),
                                     elementData.get("color").getAsString(),
@@ -194,7 +175,7 @@ public class InfiniteCraftProcess {
                                         null
                                 ).checked(
                                     GlobalDiscoveringDataManager.get(player.getEntityWorld().getServer()).getDiscovered()
-                                ));
+                                )), cost, "element", null);
                         }
                     } catch (NullPointerException e) {
                         throw new AiProblemException("The AI api is kinda broken,Illegal Element!");
@@ -205,13 +186,14 @@ public class InfiniteCraftProcess {
                 }
                 throw new AiProblemException("The AI api is kinda broken,Illegal Response!");
             } catch (Exception e) {
+                error = String.valueOf(e.getMessage());
                 System.err.println("[InfiniteCraft] Request failed ( Retry " + (i + 1) + " ): " + e.getMessage());
                 try {
                     Thread.sleep(1000L * (i + 1));
                 } catch (InterruptedException ignored) {}
             }
         }
-        return null;
+        return new CraftReply(null, cost, null, error);
     }
 
     /**
@@ -219,6 +201,11 @@ public class InfiniteCraftProcess {
      * Needs the world's registries: enchantments, sounds etc. are registry entries and get dropped without them
      */
     public static ItemStack parseItemStackFromNbt(String nbtString, RegistryWrapper.WrapperLookup registries) throws RuntimeException, CommandSyntaxException {
+        return parseItemStackFromNbt(nbtString, registries, problem -> {});
+    }
+
+    /** As above; onDropped hears what Minecraft couldn't parse when it falls back to fewer components */
+    public static ItemStack parseItemStackFromNbt(String nbtString, RegistryWrapper.WrapperLookup registries, Consumer<String> onDropped) throws RuntimeException, CommandSyntaxException {
         InfiniteCraft.LOGGER.info("Parsing Item Stack From:\n" + nbtString);
         NbtCompound nbt = StringNbtReader.readCompound(nbtString);
         ItemStack itemStack = ItemStack.CODEC.parse(registries.getOps(NbtOps.INSTANCE), nbt)
@@ -229,6 +216,7 @@ public class InfiniteCraftProcess {
                     Item item = Registries.ITEM.get(id);
                     if (item != Items.AIR) {
                         InfiniteCraft.LOGGER.warn("Fallback to minimal ItemStack for id '{}': {}", id, error);
+                        onDropped.accept(error);
                         return; // ignore the component and continue
                     }
                 }
@@ -237,15 +225,5 @@ public class InfiniteCraftProcess {
             })
             .orElse(ItemStack.EMPTY);
         return itemStack;
-    }
-
-    private static MutableText DescribeItemStack(ItemStack stack){
-        return Text.literal(String.valueOf(stack.getCount())+" * ")
-            .setStyle(Style.EMPTY.withHoverEvent(
-                new HoverEvent.ShowItem(stack)
-            ))
-            .append(
-                stack.getName()
-            );
     }
 }

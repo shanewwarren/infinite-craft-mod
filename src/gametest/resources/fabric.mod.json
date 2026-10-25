@@ -14,7 +14,8 @@
 			"com.infinite_craft.test.DashTest",
 			"com.infinite_craft.test.AuraTest",
 			"com.infinite_craft.test.VehicleTest",
-			"com.infinite_craft.test.CraftHandoffTest"
+			"com.infinite_craft.test.CraftHandoffTest",
+			"com.infinite_craft.test.CraftResultsTest"
 		],
 		"fabric-client-gametest": [
 			"com.infinite_craft.test.ShootClientGameTest",

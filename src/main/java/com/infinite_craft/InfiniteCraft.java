@@ -17,6 +17,7 @@ import com.infinite_craft.element.ElementItems;
 import com.infinite_craft.element.globaldata.GlobalDiscoveringData;
 import com.infinite_craft.element.globaldata.GlobalDiscoveringDataManager;
 import com.infinite_craft.networking.SendArrowProgressS2CPayload;
+import com.infinite_craft.playtest.Playtest;
 import com.infinite_craft.process.InfiniteCraftFakeProgressTask;
 // import com.openai.client.OpenAIClient;
 // import com.openai.client.okhttp.OpenAIOkHttpClient;
@@ -61,6 +62,7 @@ public class InfiniteCraft implements ModInitializer {
 		gemini.initClient(config);
 		claude.initClient(config);
 		DiscoveringPlayerData.register();
+		Playtest.initialize();
 
 		
         // ✅ 监听服务器启动事件

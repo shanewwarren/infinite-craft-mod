@@ -22,7 +22,7 @@ public class PlaytestLog {
 	public static final String TAG = "[InfiniteCraft/playtest] ";
 
 	/** Where lines go; tests swap it */
-	static Consumer<String> sink = InfiniteCraft.LOGGER::info;
+	public static Consumer<String> sink = InfiniteCraft.LOGGER::info;
 
 	private static final Gson GSON = new Gson();
 
@@ -99,7 +99,7 @@ public class PlaytestLog {
 		write("snapshot", json);
 	}
 
-	static synchronized void reset() {
+	public static synchronized void reset() {
 		firstUses.clear();
 		counts.clear();
 	}
