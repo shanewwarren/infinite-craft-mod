@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "infinite_craft:item/tank",
+    "layer1": "infinite_craft:item/tank_glow",
+    "particle": "#layer0"
+  }
+}

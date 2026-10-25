@@ -54,5 +54,13 @@
   {
     "model": "infinite_craft:energy_drink",
     "description": "energy drink can; the band takes the item's color"
+  },
+  {
+    "model": "infinite_craft:tank",
+    "description": "army tank with a turret and long gun; place it to drive it"
+  },
+  {
+    "model": "infinite_craft:race_car",
+    "description": "red race car on four wheels; place it to drive it"
   }
 ]

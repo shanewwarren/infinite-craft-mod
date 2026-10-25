@@ -55,7 +55,7 @@ public class VehicleEntity extends MobEntity {
 	private float throttle;
 
 	// where the gun sits at size 1: the turret's middle, and how far out the barrel tip is from there
-	private static final double TURRET_HEIGHT = 1.15;
+	private static final double TURRET_HEIGHT = 1.2;
 	private static final double BARREL_LENGTH = 2.2;
 
 	// ramming: at least this fast, in blocks per second

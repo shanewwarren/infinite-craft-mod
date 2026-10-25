@@ -292,6 +292,42 @@ MODELS = {
         ".....KKKKKK.....",
         "................",
     ]),
+    "tank": ("generated", 0xFF3030, "army tank with a turret and long gun; place it to drive it", [
+        "................",
+        "................",
+        "................",
+        "................",
+        ".......KKKK.....",
+        "......KGGGGKKKKK",
+        "......KGHGGKMMMg",
+        ".....KKKKKKKKKKK",
+        "...KKGGGGGGGGGK.",
+        "..KGGGGHGGGGHGGK",
+        "..KHHHHHHHHHHHHK",
+        ".KDDDDDDDDDDDDDK",
+        ".KDMDDMDDMDDMDDK",
+        "..KDDDDDDDDDDDK.",
+        "...KKKKKKKKKKK..",
+        "................",
+    ]),
+    "race_car": ("generated", 0xFFE040, "red race car on four wheels; place it to drive it", [
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "......KKKKK.....",
+        ".....KLLWLLK....",
+        "....KRLWLLLRK...",
+        "..KKRRRRRRRRRKK.",
+        ".KRRRRRrRRRRRRgK",
+        ".KRRRRRrRRRRRRRK",
+        ".KrrKKKrrrrKKKrK",
+        "..KKDMDKKKKDMDK.",
+        "....KDK....KDK..",
+        ".....K......K...",
+        "................",
+    ]),
 }
 
 
@@ -336,8 +372,68 @@ EQUIPMENT = {
 FACES = {"front": (20, 20), "back": (32, 20), "right": (16, 20), "left": (28, 20), "top": (20, 16)}
 
 
+# Vehicle bodies (VehicleEntityModel): box-UV layouts, light so the vehicle's color tints them; dark parts stay dark.
+# part: (u, v, width, height, depth, style); a box's UV region is (2*depth + 2*width) x (depth + height)
+VEHICLE_TEXTURES = {
+    "tank": ((256, 128), [
+        (0, 0, 6, 10, 38, "track"),
+        (0, 48, 20, 9, 34, "panel"),
+        (88, 0, 28, 3, 36, "deck"),
+        (108, 48, 14, 7, 14, "turret"),
+        (164, 48, 3, 3, 20, "barrel"),
+    ]),
+    "car": ((128, 128), [
+        (0, 0, 24, 7, 40, "body"),
+        (0, 47, 20, 7, 16, "cabin"),
+        (72, 47, 4, 8, 8, "wheel"),
+    ]),
+}
+
+
+def vehicle_pixel(style, face, x, y, w, h):
+    """Grayscale-ish color for a pixel of one face of a part; x, y within the face"""
+    noise = ((x * 7 + y * 13) % 5) * 3
+    if style == "track":
+        if face in ("right", "left"):
+            # treads along the length, wheels showing through
+            if y in (0, h - 1): return (40, 40, 44)
+            return (70, 70, 74) if (x // 3) % 2 == 0 and 2 <= y <= h - 3 else (48, 48, 52)
+        return (52 + noise, 52 + noise, 56 + noise) if x % 3 else (36, 36, 40)
+    if style == "barrel":
+        if face == "front": return (20, 20, 22)
+        return (150 + noise, 150 + noise, 150 + noise)
+    if style == "wheel":
+        if face in ("right", "left") and 2 <= x <= w - 3 and 2 <= y <= h - 3: return (150, 150, 155)
+        return (35, 35, 38)
+    if style == "cabin" and face != "top" and face != "bottom" and 1 <= y <= h - 2 and 1 <= x <= w - 2:
+        return (70, 85, 105)
+    base = {"panel": 205, "deck": 220, "turret": 225, "body": 235, "cabin": 235}[style]
+    c = base + noise
+    # panel lines and rivets
+    if style in ("panel", "deck", "turret") and (x % 8 == 7 or y == h - 1): c -= 45
+    if style == "turret" and face == "top" and 4 <= x <= 7 and 4 <= y <= 7: c = 90
+    if style == "body" and face in ("right", "left") and x in (w // 3, 2 * w // 3): c -= 60
+    return (c, c, c)
+
+
+def vehicle_texture(size, parts):
+    tw, th = size
+    img = [[(0, 0, 0, 0)] * tw for _ in range(th)]
+    for u, v, w, h, d, style in parts:
+        faces = {
+            "top": (u + d, v, w, d), "bottom": (u + d + w, v, w, d),
+            "right": (u, v + d, d, h), "front": (u + d, v + d, w, h),
+            "left": (u + d + w, v + d, d, h), "back": (u + d + w + d, v + d, w, h),
+        }
+        for face, (fx, fy, fw, fh) in faces.items():
+            for y in range(fh):
+                for x in range(fw):
+                    img[fy + y][fx + x] = (*vehicle_pixel(style, face, x, y, fw, fh), 255)
+    return img
+
+
 def png(path, pixels):
-    """pixels: 16 rows of 16 (r, g, b, a)"""
+    """pixels: rows of (r, g, b, a)"""
     raw = b"".join(b"\0" + bytes(c for px in row for c in px) for row in pixels)
     def chunk(kind, data):
         return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
@@ -419,6 +515,9 @@ def main():
         png(f"{ASSETS}/textures/entity/equipment/humanoid/{name}.png", texture)
         write_json(f"{ASSETS}/equipment/{name}.json", {"layers": {"humanoid": [{"texture": f"infinite_craft:{name}"}]}})
 
+    os.makedirs(f"{ASSETS}/textures/entity/vehicle", exist_ok=True)
+    for name, (size, parts) in VEHICLE_TEXTURES.items():
+        png(f"{ASSETS}/textures/entity/vehicle/{name}.png", vehicle_texture(size, parts))
     # the list the prompt offers Claude (AiPrompt reads it)
     write_json(f"{ASSETS}/crafted_models.json",
                [{"model": f"infinite_craft:{name}", "description": description} for name, (_, _, description, _) in MODELS.items()])

@@ -16,11 +16,11 @@ public class Vehicles {
 
 	private static final RegistryKey<EntityType<?>> VEHICLE_KEY = RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(InfiniteCraft.MOD_ID, "vehicle"));
 
-	// size 1; the scale attribute grows or shrinks it, rider seat included
+	// size 1; the scale attribute grows or shrinks it, rider seat included. The rider stands in the turret hatch
 	public static final EntityType<VehicleEntity> VEHICLE = Registry.register(Registries.ENTITY_TYPE, VEHICLE_KEY,
 		EntityType.Builder.create(VehicleEntity::new, SpawnGroup.MISC)
 			.dimensions(2.0f, 1.4f)
-			.passengerAttachments(1.25f)
+			.passengerAttachments(1.375f)
 			.maxTrackingRange(10)
 			.build(VEHICLE_KEY));
 
