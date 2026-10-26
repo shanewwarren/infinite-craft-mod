@@ -2,13 +2,16 @@ package com.infinite_craft.playtest;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
+import com.infinite_craft.InfiniteCraft;
 import com.infinite_craft.element.ElementComponentType;
 import com.infinite_craft.element.ElementData;
 import com.infinite_craft.element.PlayerEntityExt;
 import com.infinite_craft.element.globaldata.GlobalDiscoveringDataManager;
 
 import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.UseCooldownComponent;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
@@ -22,6 +25,7 @@ import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextColor;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 
 /** What happens when a craft comes back: stamp it, hand it over (or drop it at the table), and log it once */
@@ -34,6 +38,7 @@ public class CraftResults {
 	public static void deliver(ServerPlayerEntity player, ServerWorld world, BlockPos table, ItemStack result, int copies, Meta meta) {
 		ItemStack stamped = result.copy();
 		String id = CraftId.stampIfCustom(stamped).orElse(null);
+		if (id != null) ownCooldown(stamped, id);
 		boolean present = player != null && player.isAlive();
 		for (int i = 0; i < copies; i++) {
 			ItemStack copy = stamped.copy();
@@ -67,6 +72,17 @@ public class CraftResults {
 		PlaytestLog.craft(new PlaytestLog.Craft(id, player != null ? player.getGameProfile().name() : "?", meta.inputs(),
 			stamped.getName().getString(), Registries.ITEM.getId(stamped.getItem()).toString(), model, components,
 			BehaviorSignature.of(stamped, world.getRegistryManager()), meta.verdict(), meta.latencyMs(), meta.costUsd(), copies));
+	}
+
+	/**
+	 * Vanilla keys a cooldown by item id, and every crafted item is infinite_craft:custom_crafted_item, so one item's
+	 * use_cooldown would lock all the others. A cooldown with no group gets the craft's own, which its copies share
+	 */
+	private static void ownCooldown(ItemStack stack, String craftId) {
+		UseCooldownComponent cooldown = stack.get(DataComponentTypes.USE_COOLDOWN);
+		if (cooldown == null || cooldown.cooldownGroup().isPresent()) return;
+		stack.set(DataComponentTypes.USE_COOLDOWN,
+			new UseCooldownComponent(cooldown.seconds(), Optional.of(Identifier.of(InfiniteCraft.MOD_ID, "cooldown/" + craftId))));
 	}
 
 	/** The ingredients, with any custom name: a renamed ingredient is the player's wish */
