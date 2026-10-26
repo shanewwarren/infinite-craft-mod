@@ -39,10 +39,10 @@ public record AuraComponent(List<Effect> effects, Optional<Identifier> particle,
 			amplifier = MathHelper.clamp(amplifier, 0, 3);
 		}
 
-		public static final Codec<Effect> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+		public static final Codec<Effect> CODEC = Strict.of(RecordCodecBuilder.mapCodec(instance -> instance.group(
 			StatusEffect.ENTRY_CODEC.fieldOf("id").forGetter(Effect::id),
 			Codec.INT.optionalFieldOf("amplifier", 0).forGetter(Effect::amplifier)
-		).apply(instance, Effect::new));
+		).apply(instance, Effect::new)));
 	}
 
 	public AuraComponent {
@@ -52,13 +52,13 @@ public record AuraComponent(List<Effect> effects, Optional<Identifier> particle,
 		radius = MathHelper.clamp(radius, 1, 8);
 	}
 
-	public static final Codec<AuraComponent> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+	public static final Codec<AuraComponent> CODEC = Strict.of(RecordCodecBuilder.mapCodec(instance -> instance.group(
 		Effect.CODEC.listOf().optionalFieldOf("effects", List.of()).forGetter(AuraComponent::effects),
 		Identifier.CODEC.optionalFieldOf("particle").forGetter(AuraComponent::particle),
 		ShootComponent.COLOR_CODEC.optionalFieldOf("color", 0xFFD700).forGetter(AuraComponent::color),
 		Codec.FLOAT.optionalFieldOf("damage", 0.0f).forGetter(AuraComponent::damage),
 		Codec.FLOAT.optionalFieldOf("radius", 4.0f).forGetter(AuraComponent::radius)
-	).apply(instance, AuraComponent::new));
+	).apply(instance, AuraComponent::new)));
 
 	@Override
 	public void appendTooltip(Item.TooltipContext context, Consumer<Text> textConsumer, TooltipType type, ComponentsAccess components) {

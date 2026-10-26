@@ -28,10 +28,10 @@ public record ThrustComponent(float power, float speed) implements TooltipAppend
 		speed = MathHelper.clamp(speed, 0, 3);
 	}
 
-	public static final Codec<ThrustComponent> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+	public static final Codec<ThrustComponent> CODEC = Strict.of(RecordCodecBuilder.mapCodec(instance -> instance.group(
 		Codec.FLOAT.optionalFieldOf("power", 1.0f).forGetter(ThrustComponent::power),
 		Codec.FLOAT.optionalFieldOf("speed", 1.0f).forGetter(ThrustComponent::speed)
-	).apply(instance, ThrustComponent::new));
+	).apply(instance, ThrustComponent::new)));
 
 	@Override
 	public void appendTooltip(Item.TooltipContext context, Consumer<Text> textConsumer, TooltipType type, ComponentsAccess components) {

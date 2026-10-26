@@ -57,11 +57,11 @@ public record ShootComponent(Kind kind, float damage, int color, int interval, i
 			seconds = MathHelper.clamp(seconds, 1, 30);
 		}
 
-		public static final Codec<HitEffect> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+		public static final Codec<HitEffect> CODEC = Strict.of(RecordCodecBuilder.mapCodec(instance -> instance.group(
 			StatusEffect.ENTRY_CODEC.fieldOf("id").forGetter(HitEffect::id),
 			Codec.INT.optionalFieldOf("amplifier", 0).forGetter(HitEffect::amplifier),
 			Codec.FLOAT.optionalFieldOf("seconds", 5.0f).forGetter(HitEffect::seconds)
-		).apply(instance, HitEffect::new));
+		).apply(instance, HitEffect::new)));
 	}
 
 	public ShootComponent {
@@ -96,7 +96,7 @@ public record ShootComponent(Kind kind, float damage, int color, int interval, i
 	static final Codec<Integer> COLOR_CODEC = Codec.either(Codec.INT, COLOR_NAME_CODEC)
 		.xmap(either -> either.map(rgb -> rgb, rgb -> rgb), Either::left);
 
-	public static final Codec<ShootComponent> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+	public static final Codec<ShootComponent> CODEC = Strict.of(RecordCodecBuilder.mapCodec(instance -> instance.group(
 		Kind.CODEC.optionalFieldOf("kind", Kind.BEAM).forGetter(ShootComponent::kind),
 		Codec.FLOAT.optionalFieldOf("damage", 4.0f).forGetter(ShootComponent::damage),
 		COLOR_CODEC.optionalFieldOf("color", 0xFF3030).forGetter(ShootComponent::color),
@@ -111,7 +111,7 @@ public record ShootComponent(Kind kind, float damage, int color, int interval, i
 		HitEffect.CODEC.listOf().optionalFieldOf("effects", List.of()).forGetter(ShootComponent::effects)
 	).apply(instance, (kind, damage, color, interval, count, spread, fire, explode, lightning, destroy, sound, effects) ->
 		// a rocket launcher is expected to wreck things; a ray gun with a small blast isn't
-		new ShootComponent(kind, damage, color, interval, count, spread, fire, explode, lightning, destroy.orElse(kind == Kind.ROCKET), sound, effects)));
+		new ShootComponent(kind, damage, color, interval, count, spread, fire, explode, lightning, destroy.orElse(kind == Kind.ROCKET), sound, effects))));
 
 	@Override
 	public void appendTooltip(Item.TooltipContext context, Consumer<Text> textConsumer, TooltipType type, ComponentsAccess components) {

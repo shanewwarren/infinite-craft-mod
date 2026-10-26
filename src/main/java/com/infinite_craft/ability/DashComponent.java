@@ -28,10 +28,10 @@ public record DashComponent(float power, int charges) implements TooltipAppender
 		charges = MathHelper.clamp(charges, 1, 5);
 	}
 
-	public static final Codec<DashComponent> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+	public static final Codec<DashComponent> CODEC = Strict.of(RecordCodecBuilder.mapCodec(instance -> instance.group(
 		Codec.FLOAT.optionalFieldOf("power", 1.0f).forGetter(DashComponent::power),
 		Codec.INT.optionalFieldOf("charges", 1).forGetter(DashComponent::charges)
-	).apply(instance, DashComponent::new));
+	).apply(instance, DashComponent::new)));
 
 	@Override
 	public void appendTooltip(Item.TooltipContext context, Consumer<Text> textConsumer, TooltipType type, ComponentsAccess components) {

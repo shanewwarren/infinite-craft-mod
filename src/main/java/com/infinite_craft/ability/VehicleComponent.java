@@ -42,13 +42,13 @@ public record VehicleComponent(Body body, float speed, float health, int color, 
 		return new VehicleComponent(body, speed.orElse(body.speed), health.orElse(body.health), color.orElse(body.color), size);
 	}
 
-	public static final Codec<VehicleComponent> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+	public static final Codec<VehicleComponent> CODEC = Strict.of(RecordCodecBuilder.mapCodec(instance -> instance.group(
 		Body.CODEC.optionalFieldOf("body", Body.TANK).forGetter(VehicleComponent::body),
 		Codec.FLOAT.optionalFieldOf("speed").forGetter(vehicle -> Optional.of(vehicle.speed())),
 		Codec.FLOAT.optionalFieldOf("health").forGetter(vehicle -> Optional.of(vehicle.health())),
 		ShootComponent.COLOR_CODEC.optionalFieldOf("color").forGetter(vehicle -> Optional.of(vehicle.color())),
 		Codec.FLOAT.optionalFieldOf("size", 1.0f).forGetter(VehicleComponent::size)
-	).apply(instance, VehicleComponent::of));
+	).apply(instance, VehicleComponent::of)));
 
 	@Override
 	public void appendTooltip(Item.TooltipContext context, Consumer<Text> textConsumer, TooltipType type, ComponentsAccess components) {

@@ -44,10 +44,10 @@ public record SummonComponent(EntityType<?> entity, int count, int seconds, Opti
 
 	public record Gear(Optional<Item> mainhand, Optional<Item> head) {
 
-		public static final Codec<Gear> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+		public static final Codec<Gear> CODEC = Strict.of(RecordCodecBuilder.mapCodec(instance -> instance.group(
 			Registries.ITEM.getCodec().lenientOptionalFieldOf("mainhand").forGetter(Gear::mainhand),
 			Registries.ITEM.getCodec().lenientOptionalFieldOf("head").forGetter(Gear::head)
-		).apply(instance, Gear::new));
+		).apply(instance, Gear::new)));
 	}
 
 	public SummonComponent {
@@ -62,7 +62,7 @@ public record SummonComponent(EntityType<?> entity, int count, int seconds, Opti
 	private static final Codec<EntityType<?>> ENTITY_CODEC = Identifier.CODEC.xmap(
 		id -> Registries.ENTITY_TYPE.getOptionalValue(id).orElse(EntityType.WOLF), Registries.ENTITY_TYPE::getId);
 
-	public static final Codec<SummonComponent> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+	public static final Codec<SummonComponent> CODEC = Strict.of(RecordCodecBuilder.mapCodec(instance -> instance.group(
 		ENTITY_CODEC.optionalFieldOf("entity", EntityType.WOLF).forGetter(SummonComponent::entity),
 		Codec.INT.optionalFieldOf("count", 1).forGetter(SummonComponent::count),
 		Codec.INT.optionalFieldOf("seconds", 60).forGetter(SummonComponent::seconds),
@@ -70,7 +70,7 @@ public record SummonComponent(EntityType<?> entity, int count, int seconds, Opti
 		Gear.CODEC.optionalFieldOf("gear").forGetter(SummonComponent::gear),
 		Codec.FLOAT.optionalFieldOf("size", 1.0f).forGetter(SummonComponent::size),
 		ShootComponent.COLOR_CODEC.optionalFieldOf("color").forGetter(SummonComponent::color)
-	).apply(instance, SummonComponent::new));
+	).apply(instance, SummonComponent::new)));
 
 	@Override
 	public void appendTooltip(Item.TooltipContext context, Consumer<Text> textConsumer, TooltipType type, ComponentsAccess components) {
