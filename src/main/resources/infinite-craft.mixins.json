@@ -12,7 +12,9 @@
 		"ServerPlayNetworkHandlerMixin",
 		"ServerPlayerEntityMixin",
 		"LivingEntityMixin",
-		"MobEntityMixin"
+		"MobEntityMixin",
+		"MobEntityAccessor",
+		"BeeEntityAccessor"
 	],
 	"injectors": {
 		"defaultRequire": 1

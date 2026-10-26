@@ -9,16 +9,28 @@ import java.util.Optional;
 import org.jetbrains.annotations.Nullable;
 
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.Tameable;
+import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.mob.Angerable;
 import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.entity.mob.Monster;
+import net.minecraft.entity.passive.BeeEntity;
+import net.minecraft.entity.passive.IronGolemEntity;
+import net.minecraft.entity.passive.MerchantEntity;
+import net.minecraft.entity.passive.SnowGolemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.particle.DustParticleEffect;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
+
+import com.infinite_craft.mixin.BeeEntityAccessor;
 
 /**
  * The helpers {@link SummonAbility} calls: who owns each one, how long it has left, and at most
@@ -53,6 +65,44 @@ public class Summons {
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> removeAll(handler.player));
 		ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register((player, origin, destination) -> removeAll(player));
 		ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> removeAll(oldPlayer));
+		ServerLivingEntityEvents.ALLOW_DAMAGE.register((victim, source, amount) -> mayDamage(victim, source));
+	}
+
+	/** Whether the mob may go for the target (MobEntityMixin checks every setTarget) */
+	public static boolean mayTarget(MobEntity attacker, LivingEntity target) {
+		if (isSummon(attacker)) {
+			if (target instanceof PlayerEntity || isPet(target) || target instanceof MerchantEntity || isSummon(target)) return false;
+			// an animal only when it started it
+			if (!(target instanceof Monster)) {
+				PlayerEntity owner = ownerOf(attacker);
+				return target == attacker.getAttacker() || owner != null && target == owner.getAttacker();
+			}
+			return true;
+		}
+		// the player's side leaves his summons alone, even a summoned zombie
+		return !(isSummon(target) && (attacker instanceof IronGolemEntity || attacker instanceof SnowGolemEntity || isPet(attacker)));
+	}
+
+	/**
+	 * Whether the hurt may land (ALLOW_DAMAGE): a summon or its arrow never hurts a player, a pet, a villager or another
+	 * summon, and a summon can't be hurt by its own player or his pets
+	 */
+	public static boolean mayDamage(LivingEntity victim, DamageSource source) {
+		Entity attacker = source.getAttacker();
+		if (attacker == null) return true;
+		if (isSummon(attacker) && (victim instanceof PlayerEntity || isPet(victim) || victim instanceof MerchantEntity || isSummon(victim))) {
+			return false;
+		}
+		PlayerEntity owner = ownerOf(victim);
+		if (owner != null && (attacker == owner || attacker instanceof Tameable pet && pet.getOwnerReference() != null
+				&& pet.getOwnerReference().getUuid().equals(owner.getUuid()))) {
+			return false;
+		}
+		return true;
+	}
+
+	private static boolean isPet(Entity entity) {
+		return entity instanceof Tameable pet && pet.getOwnerReference() != null;
 	}
 
 	private static State state(Entity entity) {
@@ -113,6 +163,14 @@ public class Summons {
 			forget(mob);
 			vanish(mob);
 			return;
+		}
+		// bees and wolves only fight while angry, and a bee loses its stinger after one sting: not a summoned one
+		if (mob.getTarget() != null && mob instanceof Angerable angerable && angerable.getAngerTime() <= 0) {
+			angerable.chooseRandomAngerTime();
+			angerable.setAngryAt(mob.getTarget().getUuid());
+		}
+		if (mob instanceof BeeEntity bee && bee.hasStung()) {
+			((BeeEntityAccessor) bee).infiniteCraft$setHasStung(false);
 		}
 		if (state.color.isPresent() && mob.age % 10 == 0 && mob.getEntityWorld() instanceof ServerWorld world) {
 			world.spawnParticles(new DustParticleEffect(state.color.get(), 1.0f), mob.getX(), mob.getY() + mob.getHeight() / 2, mob.getZ(),

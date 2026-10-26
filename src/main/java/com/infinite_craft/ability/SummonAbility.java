@@ -90,6 +90,7 @@ public class SummonAbility {
 			return null;
 		}
 		Summons.register(mob, owner, summon.seconds() * 20, summon.color());
+		SummonGoals.apply(mob, owner);
 		if (!world.spawnEntity(mob)) {
 			Summons.forget(mob);
 			return null;

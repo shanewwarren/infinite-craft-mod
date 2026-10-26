@@ -4,17 +4,29 @@ import static com.infinite_craft.test.CraftedItemUseTest.floor;
 import static com.infinite_craft.test.CraftedItemUseTest.player;
 import static com.infinite_craft.test.CraftedItemUseTest.use;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.infinite_craft.ability.Abilities;
+import com.infinite_craft.ability.Blast;
+import com.infinite_craft.ability.ShootComponent;
 import com.infinite_craft.ability.SummonComponent;
 import com.infinite_craft.ability.Summons;
+import com.infinite_craft.mixin.MobEntityAccessor;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ExperienceOrbEntity;
 import net.minecraft.entity.ItemEntity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.ai.goal.ActiveTargetGoal;
+import net.minecraft.entity.conversion.EntityConversionContext;
+import net.minecraft.entity.mob.HuskEntity;
+import net.minecraft.entity.passive.BeeEntity;
+import net.minecraft.entity.passive.IronGolemEntity;
+import net.minecraft.entity.passive.VillagerEntity;
+import net.minecraft.entity.passive.WolfEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.ZombieEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -188,5 +200,167 @@ public class SummonTest {
 		context.assertTrue(zombie.isDead() && items.isEmpty() && orbs.isEmpty(),
 			Text.literal("dead %s, dropped %s and %d xp orbs".formatted(zombie.isDead(), items, orbs.size())));
 		context.complete();
+	}
+
+	// --- on his side
+
+	private static WolfEntity pet(TestContext context, PlayerEntity owner, double x, double z) {
+		WolfEntity wolf = context.spawnEntity(EntityType.WOLF, new Vec3d(x, 1, z));
+		wolf.setTamed(true, true);
+		wolf.setOwner(owner);
+		return wolf;
+	}
+
+	private static boolean hurt(LivingEntity entity) {
+		return entity.isRemoved() || entity.getHealth() < entity.getMaxHealth();
+	}
+
+	@GameTest(maxTicks = 300)
+	public void zombieAttacksHusk(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		HuskEntity husk = context.spawnEntity(EntityType.HUSK, new Vec3d(1.5, 1, 1.5));
+		summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:zombie\"}")));
+		context.runAtEveryTick(() -> {
+			if (hurt(husk)) context.complete();
+		});
+		context.runAtTick(250, () -> context.assertTrue(false, Text.literal("the summoned zombie never hurt the husk")));
+	}
+
+	@GameTest(maxTicks = 400)
+	public void skeletonShotsNeverHurtOwnerOrPet(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		WolfEntity wolf = pet(context, player, 4.5, 5.5);
+		// a target dummy straight behind the player, so the skeleton shoots past him
+		HuskEntity husk = context.spawnEntity(EntityType.HUSK, new Vec3d(7.5, 1, 4.5));
+		husk.setAiDisabled(true);
+		summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:skeleton\",gear:{mainhand:\"minecraft:bow\"}}")));
+		MobEntity skeleton = Summons.of(player).getFirst();
+		// close behind him, so its arrows pass through where he stands
+		skeleton.refreshPositionAndAngles(context.getAbsolute(new Vec3d(2.5, 1, 4.5)), 0, 0);
+		context.runAtTick(300, () -> {
+			context.assertTrue(!hurt(player) && !hurt(wolf),
+				Text.literal("player health %s, wolf health %s".formatted(player.getHealth(), wolf.getHealth())));
+			context.assertTrue(hurt(husk), Text.literal("the skeleton never hit the husk"));
+			context.complete();
+		});
+	}
+
+	@GameTest(maxTicks = 300)
+	public void ironGolemAndTamedWolfLeaveSummonAlone(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		WolfEntity wolf = pet(context, player, 5.5, 5.5);
+		IronGolemEntity golem = context.spawnEntity(EntityType.IRON_GOLEM, new Vec3d(1.5, 1, 1.5));
+		summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:zombie\"}")));
+		MobEntity zombie = Summons.of(player).getFirst();
+		// he swings at his own summon by accident: his wolf joins in on what he attacks
+		player.attack(zombie);
+		context.runAtEveryTick(() -> context.assertTrue(golem.getTarget() != zombie && wolf.getTarget() != zombie,
+			Text.literal("golem target %s, wolf target %s".formatted(golem.getTarget(), wolf.getTarget()))));
+		context.runAtTick(200, () -> {
+			context.assertTrue(!hurt(zombie), Text.literal("the summon was hurt: " + zombie.getHealth()));
+			context.complete();
+		});
+	}
+
+	@GameTest(maxTicks = 300, skyAccess = true)
+	public void summonsDontBurnInDaylight(TestContext context) {
+		floor(context);
+		context.getWorld().setTimeOfDay(6000);
+		PlayerEntity player = player(context);
+		summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:zombie\"}")));
+		summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:skeleton\"}")));
+		List<MobEntity> summons = Summons.of(player);
+		// no helmet to hide under
+		summons.forEach(mob -> mob.equipStack(net.minecraft.entity.EquipmentSlot.HEAD, ItemStack.EMPTY));
+		context.runAtEveryTick(() -> summons.forEach(mob -> context.assertTrue(!mob.isOnFire(), Text.literal(mob.getType().getName().getString() + " caught fire in daylight"))));
+		context.runAtTick(200, context::complete);
+	}
+
+	@GameTest(maxTicks = 20)
+	public void blastSparesOwnSummons(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:zombie\"}")));
+		MobEntity zombie = Summons.of(player).getFirst();
+		zombie.setVelocity(Vec3d.ZERO);
+		ShootComponent rocket = ThrustTest.parse(context,
+			"{id:\"infinite_craft:custom_crafted_item\",count:1i,components:{\"infinite_craft:shoot\":{kind:\"rocket\",explode:3.0f}}}").get(Abilities.SHOOT);
+		Blast.at(context.getWorld(), zombie.getEntityPos().add(1, 0, 0), rocket, null, player, null);
+		context.assertTrue(!hurt(zombie) && zombie.getVelocity().length() < 0.05,
+			Text.literal("his own blast hit his summon: health %s, pushed %.2f".formatted(zombie.getHealth(), zombie.getVelocity().length())));
+		context.complete();
+	}
+
+	@GameTest(maxTicks = 20)
+	public void summonNeverConverts(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:zombie\"}")));
+		MobEntity zombie = Summons.of(player).getFirst();
+		MobEntity drowned = zombie.convertTo(EntityType.DROWNED, EntityConversionContext.create(zombie, true, true), d -> {});
+		context.assertTrue(drowned == null && !zombie.isRemoved() && Summons.isSummon(zombie),
+			Text.literal("the summoned zombie turned into " + drowned));
+		context.complete();
+	}
+
+	@GameTest(maxTicks = 400)
+	public void beeKeepsItsStinger(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		HuskEntity husk = context.spawnEntity(EntityType.HUSK, new Vec3d(1.5, 1, 1.5));
+		husk.setAiDisabled(true);
+		summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:bee\"}")));
+		BeeEntity bee = (BeeEntity) Summons.of(player).getFirst();
+		int[] stungAt = {-1};
+		int[] tick = {0};
+		context.runAtEveryTick(() -> {
+			tick[0]++;
+			// a sting only poisons on normal or hard, but it always hurts
+			if (stungAt[0] < 0 && hurt(husk)) stungAt[0] = tick[0];
+			if (stungAt[0] >= 0 && tick[0] == stungAt[0] + 2) {
+				context.assertTrue(!bee.hasStung() && bee.isAlive(), Text.literal("the bee lost its stinger"));
+				context.complete();
+			}
+		});
+		context.runAtTick(350, () -> context.assertTrue(false, Text.literal("the bee never stung the husk")));
+	}
+
+	/**
+	 * The stress target: a minute of melee and crossfire around him, his wolf and a villager. Wild husks fight his 12
+	 * summons (they're set to go only for summons, so any harm to the three below is the summons' doing)
+	 */
+	@GameTest(maxTicks = 1300, skyAccess = true)
+	public void brawl(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		WolfEntity wolf = pet(context, player, 5.5, 4.5);
+		VillagerEntity villager = context.spawnEntity(EntityType.VILLAGER, new Vec3d(3.5, 1, 4.5));
+		summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:zombie\",count:6}")));
+		summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:skeleton\",count:3}")));
+		summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:pillager\",count:3}")));
+		int summoned = Summons.of(player).size();
+		List<HuskEntity> husks = new ArrayList<>();
+		double[][] corners = {{0.5, 0.5}, {7.5, 0.5}, {0.5, 7.5}, {7.5, 7.5}};
+		for (int wave = 0; wave < 12; wave++) {
+			double[] corner = corners[wave % 4];
+			context.runAtTick(20 + wave * 100L, () -> {
+				HuskEntity husk = context.spawnEntity(EntityType.HUSK, new Vec3d(corner[0], 1, corner[1]));
+				MobEntityAccessor accessor = (MobEntityAccessor) husk;
+				accessor.infiniteCraft$targetSelector().clear(goal -> true);
+				accessor.infiniteCraft$targetSelector().add(1, new ActiveTargetGoal<>(husk, MobEntity.class, false, (e, w) -> Summons.isSummon(e)));
+				husks.add(husk);
+			});
+		}
+		context.runAtTick(1220, () -> {
+			context.assertTrue(summoned == 12, Text.literal("only " + summoned + " summoned"));
+			context.assertTrue(!hurt(player) && !hurt(wolf) && !hurt(villager),
+				Text.literal("player %s, wolf %s, villager %s".formatted(player.getHealth(), wolf.getHealth(), villager.getHealth())));
+			long fought = husks.stream().filter(SummonTest::hurt).count();
+			context.assertTrue(fought >= 8, Text.literal("only " + fought + " of " + husks.size() + " husks were fought"));
+			context.complete();
+		});
 	}
 }
