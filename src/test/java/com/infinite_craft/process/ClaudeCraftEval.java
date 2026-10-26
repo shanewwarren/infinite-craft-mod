@@ -23,6 +23,7 @@ import com.infinite_craft.InfiniteCraftConfig;
 import com.infinite_craft.InfiniteItem;
 import com.infinite_craft.TestBootstrap;
 import com.infinite_craft.ability.Abilities;
+import com.infinite_craft.ability.SummonComponent;
 import com.infinite_craft.ai.AiPrompt;
 import com.infinite_craft.ai.Claude;
 import com.infinite_craft.element.ElementItems;
@@ -353,6 +354,49 @@ public class ClaudeCraftEval {
 			if (!doesSomething(nbt)) {
 				throw new AssertionError("inert example: " + nbt);
 			}
+		}
+	}
+
+	// the 2026-10-25 eval's Skeleton Army Horn, graded clean though its gear.chest was dropped without a word
+	static final String SKELETON_HORN_WITH_UNKNOWN_FIELD = """
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_name":{text:"Skeleton Army Horn",color:"white"},"infinite_craft:summon":{entity:"minecraft:skeleton",count:6,seconds:90,gear:{mainhand:"minecraft:bow",head:"minecraft:iron_helmet",cape:"minecraft:elytra"},color:"#E0E0E0"}}}""";
+
+	@Test
+	void unknownFieldInOurComponentIsNotClean() throws Exception {
+		if (parsesCleanly(SKELETON_HORN_WITH_UNKNOWN_FIELD)) throw new AssertionError("a field the mod ignores was graded clean");
+		String[] dropped = {null};
+		ItemStack horn = InfiniteCraftProcess.parseItemStackFromNbt(SKELETON_HORN_WITH_UNKNOWN_FIELD, registries, problem -> dropped[0] = problem);
+		if (dropped[0] == null || !dropped[0].contains("cape")) throw new AssertionError("the verdict doesn't name the field: " + dropped[0]);
+		// the rest of the item still works
+		SummonComponent summon = horn.get(Abilities.SUMMON);
+		if (summon == null || summon.gear().flatMap(SummonComponent.Gear::mainhand).isEmpty() || summon.count() != 6) {
+			throw new AssertionError("the horn lost what it did know: " + summon);
+		}
+	}
+
+	@Test
+	void evalSkeletonHornWithChestIsClean() throws Exception {
+		String horn = "{id:\"infinite_craft:custom_crafted_item\",count:1i,components:{\"minecraft:item_model\":\"infinite_craft:summon_horn\",\"minecraft:custom_model_data\":{colors:[14737632]},\"minecraft:item_name\":{text:\"Skeleton Army Horn\",color:\"white\"},\"minecraft:max_stack_size\":1,\"minecraft:use_cooldown\":{seconds:5.0f},\"infinite_craft:summon\":{entity:\"minecraft:skeleton\",count:6,seconds:90,name:\"Skeleton Soldier\",gear:{mainhand:\"minecraft:bow\",head:\"minecraft:iron_helmet\",chest:\"minecraft:chainmail_chestplate\"},color:\"#E0E0E0\"}}}";
+		if (!parsesCleanly(horn)) throw new AssertionError("the eval's Skeleton Army Horn isn't clean");
+	}
+
+	// every record Claude writes inside our components: an extra field in any of them makes the craft not clean
+	@Test
+	void unknownFieldAnywhereInOurComponentsIsNotClean() throws Exception {
+		Map<String, String> places = new LinkedHashMap<>();
+		for (String ability : List.of("shoot", "thrust", "launch", "dash", "aura", "vehicle", "summon")) {
+			places.put("\"infinite_craft:" + ability + "\":{", "\"infinite_craft:" + ability + "\":{oops:1,");
+		}
+		places.put("effects:[{id:\"minecraft:slowness\"", "effects:[{oops:1,id:\"minecraft:slowness\""); // a shot's hit effect
+		places.put("\"infinite_craft:aura\":{effects:[{", "\"infinite_craft:aura\":{effects:[{oops:1,");
+		places.put("gear:{", "gear:{oops:1,");
+		places.put("type:\"infinite_craft:attributes\",", "type:\"infinite_craft:attributes\",oops:1,");
+		places.put("modifiers:[{type:\"minecraft:scale\"", "modifiers:[{oops:1,type:\"minecraft:scale\"");
+		for (Map.Entry<String, String> place : places.entrySet()) {
+			String example = AiPrompt.POWER_EXAMPLES.stream().map(String::strip).filter(e -> e.contains(place.getKey())).findFirst()
+				.orElseThrow(() -> new AssertionError("no prompt example has " + place.getKey()));
+			String withOops = example.replaceFirst(java.util.regex.Pattern.quote(place.getKey()), java.util.regex.Matcher.quoteReplacement(place.getValue()));
+			if (parsesCleanly(withOops)) throw new AssertionError("an unknown field after " + place.getKey() + " was graded clean");
 		}
 	}
 

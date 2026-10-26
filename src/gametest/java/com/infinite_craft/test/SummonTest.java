@@ -6,6 +6,7 @@ import static com.infinite_craft.test.CraftedItemUseTest.use;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.infinite_craft.ability.Abilities;
 import com.infinite_craft.ability.Blast;
@@ -18,10 +19,12 @@ import com.infinite_craft.mixin.MobEntityAccessor;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.ExperienceOrbEntity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.goal.ActiveTargetGoal;
+import net.minecraft.entity.ai.goal.FleeEntityGoal;
 import net.minecraft.entity.conversion.EntityConversionContext;
 import net.minecraft.entity.mob.HuskEntity;
 import net.minecraft.entity.passive.BeeEntity;
@@ -31,7 +34,9 @@ import net.minecraft.entity.passive.WolfEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.ZombieEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.test.TestContext;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
@@ -183,6 +188,23 @@ public class SummonTest {
 		});
 	}
 
+	// the eval's Skeleton Army Horn asked for a chestplate, which was dropped when gear had only mainhand and head
+	@GameTest(maxTicks = 20)
+	public void summonsWearAllTheirGear(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:skeleton\",gear:{mainhand:\"minecraft:bow\","
+			+ "offhand:\"minecraft:shield\",head:\"minecraft:iron_helmet\",chest:\"minecraft:chainmail_chestplate\","
+			+ "legs:\"minecraft:golden_leggings\",feet:\"minecraft:diamond_boots\"}}")));
+		MobEntity skeleton = Summons.of(player).getFirst();
+		Map<EquipmentSlot, Item> expected = Map.of(EquipmentSlot.MAINHAND, Items.BOW, EquipmentSlot.OFFHAND, Items.SHIELD,
+			EquipmentSlot.HEAD, Items.IRON_HELMET, EquipmentSlot.CHEST, Items.CHAINMAIL_CHESTPLATE,
+			EquipmentSlot.LEGS, Items.GOLDEN_LEGGINGS, EquipmentSlot.FEET, Items.DIAMOND_BOOTS);
+		expected.forEach((slot, item) -> context.assertTrue(skeleton.getEquippedStack(slot).isOf(item),
+			Text.literal(slot.getName() + " is " + skeleton.getEquippedStack(slot))));
+		context.complete();
+	}
+
 	@GameTest(maxTicks = 20)
 	public void summonsDropNoLootOrXp(TestContext context) {
 		floor(context);
@@ -245,6 +267,23 @@ public class SummonTest {
 			if (hurt(husk)) context.complete();
 		});
 		context.runAtTick(560, () -> context.assertTrue(false, Text.literal("the skeleton never hit the husk")));
+	}
+
+	// vanilla skeletons run from wolves and foxes from wolves and polar bears, ahead of attacking: a summoned skeleton near
+	// his wolf (or his Wolf Whistle pack) kept dropping its draw and never shot
+	@GameTest(maxTicks = 20)
+	public void summonsDontRunFromHisSide(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		for (String mob : List.of("skeleton", "stray", "bogged", "fox")) {
+			summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:" + mob + "\"}")));
+		}
+		for (MobEntity summon : Summons.of(player)) {
+			boolean flees = ((MobEntityAccessor) summon).infiniteCraft$goalSelector().getGoals().stream()
+				.anyMatch(goal -> goal.getGoal() instanceof FleeEntityGoal);
+			context.assertTrue(!flees, Text.literal("a summoned " + summon.getType().getUntranslatedName() + " still runs away"));
+		}
+		context.complete();
 	}
 
 	@GameTest(maxTicks = 300)

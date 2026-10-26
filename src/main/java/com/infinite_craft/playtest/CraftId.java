@@ -8,6 +8,8 @@ import com.infinite_craft.element.ElementData;
 import com.mojang.serialization.Codec;
 
 import net.minecraft.component.ComponentType;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.UseCooldownComponent;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
@@ -37,6 +39,23 @@ public class CraftId {
 		stack.set(TYPE, id);
 		return Optional.of(id);
 	}
+
+	/**
+	 * The cooldown group of a crafted item: its own, shared by copies of the same craft. A group Claude chose is kept,
+	 * but not one of ours copied from an ingredient (an upgraded Golem Bell must not share the old bell's cooldown)
+	 */
+	public static Optional<Identifier> cooldownGroup(ItemStack stack) {
+		Optional<String> id = of(stack);
+		if (id.isEmpty()) return Optional.empty();
+		UseCooldownComponent cooldown = stack.get(DataComponentTypes.USE_COOLDOWN);
+		Optional<Identifier> chosen = cooldown == null ? Optional.empty() : cooldown.cooldownGroup();
+		if (chosen.isPresent() && !(chosen.get().getNamespace().equals(InfiniteCraft.MOD_ID) && chosen.get().getPath().startsWith(COOLDOWN_PREFIX))) {
+			return Optional.empty();
+		}
+		return Optional.of(Identifier.of(InfiniteCraft.MOD_ID, COOLDOWN_PREFIX + id.get()));
+	}
+
+	private static final String COOLDOWN_PREFIX = "cooldown/";
 
 	public static Optional<String> of(ItemStack stack) {
 		return Optional.ofNullable(stack.get(TYPE));

@@ -10,6 +10,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.TargetPredicate;
 import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.DoorInteractGoal;
+import net.minecraft.entity.ai.goal.FleeEntityGoal;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.goal.MoveThroughVillageGoal;
 import net.minecraft.entity.ai.goal.RevengeGoal;
@@ -39,8 +40,9 @@ public class SummonGoals {
 		if (mob instanceof PathAwareEntity walker) goals.infiniteCraft$targetSelector().add(2, new RevengeGoal(walker));
 		goals.infiniteCraft$targetSelector().add(3, new ActiveTargetGoal<>(mob, MobEntity.class, 10, true, false,
 			(target, world) -> target instanceof Monster && !Summons.isSummon(target) && target.squaredDistanceTo(owner) < GUARD_RANGE * GUARD_RANGE));
+		// running away comes before attacking: a skeleton near his wolf (skeletons flee wolves) would never shoot
 		goals.infiniteCraft$goalSelector().clear(goal -> goal instanceof StepAndDestroyBlockGoal || goal instanceof MoveThroughVillageGoal
-			|| goal instanceof DoorInteractGoal);
+			|| goal instanceof DoorInteractGoal || goal instanceof FleeEntityGoal);
 		goals.infiniteCraft$goalSelector().add(5, new FollowOwnerGoal(mob, owner));
 	}
 

@@ -110,12 +110,37 @@ public class CraftedItemUseTest {
 		useAll(context, List.of(new Fixture("long arms", LONG_ARMS.strip())), "CraftedItemUseTest", "held-items.md");
 	}
 
+	// the eval's Spider Gloves: off-hand modifiers with no equippable, so only which hand holds them says where they work
+	static final String SPIDER_GLOVES = """
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:leather","minecraft:item_name":{text:"Spider Gloves",color:"dark_gray"},"minecraft:max_stack_size":1,"minecraft:attribute_modifiers":[{type:"minecraft:step_height",id:"infinite_craft:spider_step",amount:2.0d,operation:"add_value",slot:"offhand"},{type:"minecraft:safe_fall_distance",id:"infinite_craft:spider_fall",amount:8.0d,operation:"add_value",slot:"offhand"}]}}""";
+
+	@GameTest(maxTicks = 20)
+	public void offHandItemDoesSomething(TestContext context) {
+		useAll(context, List.of(new Fixture("spider gloves", SPIDER_GLOVES.strip())), "CraftedItemUseTest", "held-items.md");
+	}
+
+	// the same gloves with every amount 0 do nothing, and the check must say so
+	@GameTest(maxTicks = 20)
+	public void offHandItemThatDoesNothingIsReported(TestContext context) {
+		String useless = SPIDER_GLOVES.strip().replace("amount:2.0d", "amount:0.0d").replace("amount:8.0d", "amount:0.0d");
+		List<String> failures = tryAll(context, List.of(new Fixture("useless gloves", useless)), "CraftedItemUseTest", "held-items-useless.md");
+		context.assertTrue(failures.size() == 1, net.minecraft.text.Text.literal("0-amount gloves weren't reported: " + failures));
+		context.complete();
+	}
+
 	@GameTest(maxTicks = 20, required = false, skyAccess = true)
 	public void evalItemsDoSomething(TestContext context) {
 		useAll(context, evalFixtures(), evalItems().map(Path::toString).orElse("the checked-in eval snapshot"), "eval-items.md");
 	}
 
 	private static void useAll(TestContext context, List<Fixture> fixtures, String source, String reportName) {
+		List<String> failures = tryAll(context, fixtures, source, reportName);
+		context.assertTrue(failures.isEmpty(), net.minecraft.text.Text.literal("Items that did nothing when used: " + failures));
+		context.complete();
+	}
+
+	/** Uses each fixture and writes the report; returns the ones that did nothing */
+	private static List<String> tryAll(TestContext context, List<Fixture> fixtures, String source, String reportName) {
 		floor(context);
 		Hit fist = hit(context, ItemStack.EMPTY);
 		StringBuilder report = new StringBuilder("# Crafted item use test\n\n")
@@ -147,8 +172,7 @@ public class CraftedItemUseTest {
 		}
 
 		writeReport(reportName, report.toString());
-		context.assertTrue(failures.isEmpty(), net.minecraft.text.Text.literal("Items that did nothing when used: " + failures));
-		context.complete();
+		return failures;
 	}
 
 	/** Every way the item can be used, each with what happened */
@@ -161,7 +185,9 @@ public class CraftedItemUseTest {
 			checks.add(wear(context, stack, equippable.slot()));
 		}
 		// a held item with no attack, like Long Arms: holding it changes the holder's attributes (a melee item is checked by hitting)
-		EquipmentSlot hand = equippable != null && equippable.slot() == EquipmentSlot.OFFHAND ? EquipmentSlot.OFFHAND : EquipmentSlot.MAINHAND;
+		// in the hand its equippable names, else whichever hand its modifiers are for (Spider Gloves name the off hand only)
+		EquipmentSlot hand = equippable != null && equippable.slot() == EquipmentSlot.OFFHAND ? EquipmentSlot.OFFHAND
+			: equippable == null && modifiedAttributes(stack, EquipmentSlot.MAINHAND).isEmpty() ? EquipmentSlot.OFFHAND : EquipmentSlot.MAINHAND;
 		if ((equippable == null || !equippable.slot().isArmorSlot()) && !isMelee(stack) && !modifiedAttributes(stack, hand).isEmpty()) {
 			checks.add(hold(context, stack, hand));
 		}

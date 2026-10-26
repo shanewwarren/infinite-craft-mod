@@ -32,10 +32,10 @@ public record TimedAttributesConsumeEffect(List<Modifier> modifiers, float secon
 
 	public record Modifier(RegistryEntry<EntityAttribute> type, EntityAttributeModifier modifier) {
 
-		public static final Codec<Modifier> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+		public static final Codec<Modifier> CODEC = Strict.of(RecordCodecBuilder.mapCodec(instance -> instance.group(
 			EntityAttribute.CODEC.fieldOf("type").forGetter(Modifier::type),
 			EntityAttributeModifier.MAP_CODEC.forGetter(Modifier::modifier)
-		).apply(instance, Modifier::new));
+		).apply(instance, Modifier::new)));
 	}
 
 	public TimedAttributesConsumeEffect {
@@ -44,10 +44,10 @@ public record TimedAttributesConsumeEffect(List<Modifier> modifiers, float secon
 		seconds = MathHelper.clamp(seconds, 1, 600);
 	}
 
-	public static final MapCodec<TimedAttributesConsumeEffect> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+	public static final MapCodec<TimedAttributesConsumeEffect> CODEC = Strict.map(RecordCodecBuilder.mapCodec(instance -> instance.group(
 		Modifier.CODEC.listOf().optionalFieldOf("modifiers", List.of()).forGetter(TimedAttributesConsumeEffect::modifiers),
 		Codec.FLOAT.optionalFieldOf("seconds", 30.0f).forGetter(TimedAttributesConsumeEffect::seconds)
-	).apply(instance, TimedAttributesConsumeEffect::new));
+	).apply(instance, TimedAttributesConsumeEffect::new)), "type");
 
 	public static final ConsumeEffect.Type<TimedAttributesConsumeEffect> TYPE = Registry.register(Registries.CONSUME_EFFECT_TYPE,
 		Identifier.of(InfiniteCraft.MOD_ID, "attributes"), new ConsumeEffect.Type<>(CODEC, PacketCodecs.registryCodec(CODEC.codec())));

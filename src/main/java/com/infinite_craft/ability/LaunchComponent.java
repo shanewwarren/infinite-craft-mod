@@ -28,10 +28,10 @@ public record LaunchComponent(float power, float up) implements TooltipAppender 
 		up = MathHelper.clamp(up, 0, 2);
 	}
 
-	public static final Codec<LaunchComponent> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+	public static final Codec<LaunchComponent> CODEC = Strict.of(RecordCodecBuilder.mapCodec(instance -> instance.group(
 		Codec.FLOAT.optionalFieldOf("power", 1.5f).forGetter(LaunchComponent::power),
 		Codec.FLOAT.optionalFieldOf("up", 0.5f).forGetter(LaunchComponent::up)
-	).apply(instance, LaunchComponent::new));
+	).apply(instance, LaunchComponent::new)));
 
 	@Override
 	public void appendTooltip(Item.TooltipContext context, Consumer<Text> textConsumer, TooltipType type, ComponentsAccess components) {
