@@ -308,7 +308,7 @@ public class AiPrompt {
 			\t\t\tRight-click calls mobs that fight monsters for the player and never hurt him, his pets, villagers or each other; they go after seconds. At most 12 at once.
 			\t\t\tFields: entity (one of minecraft:wolf, iron_golem, snow_golem, bee, fox, polar_bear, llama, zombie, husk, drowned, skeleton, stray, bogged, vindicator, pillager, vex; anything else is a wolf),
 			\t\t\tcount (how many each use, 1 to 6), seconds (how long they stay, 10 to 180), name (shown above each one), size (0.5 half size to 2 giant),
-			\t\t\tgear (what they hold and wear, item ids only, any of mainhand, offhand, head, chest, legs, feet: {mainhand:"minecraft:crossbow",head:"minecraft:golden_helmet",chest:"minecraft:chainmail_chestplate"}), color (the puff they arrive and leave in).
+			\t\t\tgear (what they hold and wear, item ids only, any of mainhand, offhand, head, chest, legs, feet: {mainhand:"minecraft:crossbow",head:"minecraft:golden_helmet",chest:"minecraft:chainmail_chestplate"}; armor only shows on zombies, skeletons and illagers), color (the puff they arrive and leave in).
 			\t\t\tMake different helpers different: pick the mob that fits the name, give an army several, a bodyguard one big one, a bee jar a swarm of bees.
 			\t\t\tUse "minecraft:item_model":"infinite_craft:summon_horn" for horns, bells and whistles, or a fitting vanilla model (a honey bottle for a bee jar, a bone for a dog whistle).
 			\t\tFun without fighting (shrink rings, giant crowns, moon boots, spider gloves, long arms, fish gills): not every item is a weapon.

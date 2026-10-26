@@ -6,6 +6,7 @@
 		"ScreenHandlerMixin",
 		"CraftingTableBlockMixin",
 		"PlayerEntityMixin",
+		"ItemCooldownManagerMixin",
 		"ItemStackMixin",
 		"PersistentProjectileEntityMixin",
 		"FireworkRocketEntityMixin",

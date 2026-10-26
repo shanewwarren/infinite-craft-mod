@@ -168,13 +168,41 @@ public class CraftResultsTest {
 		context.complete();
 	}
 
+	// crafted before cooldowns had their own group: stamped with a craft id, no group
+	@GameTest
+	public void cooldownOnAnOlderCraftLocksOnlyItself(TestContext context) {
+		ItemStack bell = ThrustTest.parse(context, "{id:\"infinite_craft:custom_crafted_item\",count:1i,components:{\"minecraft:use_cooldown\":{seconds:10.0f},\"infinite_craft:craft_id\":\"0000beef\"}}");
+		ItemStack gun = ThrustTest.parse(context, "{id:\"infinite_craft:custom_crafted_item\",count:1i,components:{\"minecraft:item_name\":\"Ray Gun\",\"infinite_craft:craft_id\":\"0000cafe\"}}");
+		PlayerEntity player = CraftedItemUseTest.player(context);
+		bell.get(DataComponentTypes.USE_COOLDOWN).set(bell, player);
+		context.assertTrue(player.getItemCooldownManager().isCoolingDown(bell), Text.literal("the bell isn't on cooldown"));
+		context.assertTrue(!player.getItemCooldownManager().isCoolingDown(gun), Text.literal("an older bell put the ray gun on cooldown"));
+		context.complete();
+	}
+
+	// Claude copies an ingredient's cooldown, group and all, onto an upgraded item: the two must not lock each other
+	@GameTest
+	public void cooldownCopiedFromAnIngredientIsTheNewCraftsOwn(TestContext context) {
+		CraftedItemUseTest.floor(context);
+		ItemStack oldBell = craftCopies(context, "{id:\"infinite_craft:custom_crafted_item\",count:1i,components:{\"minecraft:use_cooldown\":{seconds:10.0f}}}", 1).get(0);
+		Identifier oldGroup = player(context).getItemCooldownManager().getGroup(oldBell);
+		ItemStack newBell = craftCopies(context, "{id:\"infinite_craft:custom_crafted_item\",count:1i,components:{\"minecraft:item_name\":\"Mega Bell\",\"minecraft:use_cooldown\":{seconds:10.0f,cooldown_group:\"" + oldGroup + "\"}}}", 1).get(0);
+		PlayerEntity player = CraftedItemUseTest.player(context);
+		oldBell.get(DataComponentTypes.USE_COOLDOWN).set(oldBell, player);
+		context.assertTrue(!player.getItemCooldownManager().isCoolingDown(newBell), Text.literal("the upgraded bell shares the old one's cooldown " + oldGroup));
+		context.complete();
+	}
+
+	private static PlayerEntity player(TestContext context) {
+		return CraftedItemUseTest.player(context);
+	}
+
 	// a group Claude chose on purpose is kept
 	@GameTest
 	public void cooldownGroupClaudeChoseIsKept(TestContext context) {
 		CraftedItemUseTest.floor(context);
 		ItemStack wand = craftCopies(context, "{id:\"infinite_craft:custom_crafted_item\",count:1i,components:{\"minecraft:use_cooldown\":{seconds:3.0f,cooldown_group:\"minecraft:wands\"}}}", 1).get(0);
-		context.assertEquals(Identifier.of("minecraft", "wands"), wand.get(DataComponentTypes.USE_COOLDOWN).cooldownGroup().orElse(null),
-			Text.literal("cooldown group"));
+		context.assertEquals(Identifier.of("minecraft", "wands"), player(context).getItemCooldownManager().getGroup(wand), Text.literal("cooldown group"));
 		context.complete();
 	}
 }
