@@ -80,6 +80,10 @@ that fires, wears and throws away crafted items and then reads its own `latest.l
 
 ### Mod abilities Claude can give items
 
+A field one of these components doesn't know (a typo, or a slot that doesn't exist) no longer vanishes without a word: the item still
+works with everything else, and the craft is logged as *partial* (the eval grades it *usable*) with the field named. A crafted item's
+`minecraft:use_cooldown` locks only that craft and its copies, not every crafted item, unless Claude gives it a `cooldown_group`.
+
 `infinite_craft:shoot` makes any item fire while right click is held, with no ammo:
 `{kind:"beam"|"bullet"|"rocket", damage:6.0f, interval:10, count:1, spread:0.0f, color:"green", fire:false, sound:"minecraft:..."}`.
 `interval` is ticks between shots (4 is the fastest), `count` is shots per pull (shotguns). Respects `minecraft:use_cooldown`.
@@ -116,7 +120,8 @@ any vehicle; sneak-hitting it gives the item back repaired, and a destroyed vehi
 `infinite_craft:summon` calls helpers that fight for the player: right-click and they appear on free ground around him.
 `{entity:"minecraft:skeleton", count:5, seconds:60, gear:{mainhand:"minecraft:bow", head:"minecraft:iron_helmet"}, name:"Bones",
 size:1.0f, color:"#E0E0E0"}`. Mobs: wolf, iron golem, snow golem, bee, fox, polar bear, llama, zombie, husk, drowned, skeleton, stray,
-bogged, vindicator, pillager, vex (anything else is a wolf); count 1 to 6, 10 to 180 seconds, size 0.5 to 2. They go for whatever attacks
+bogged, vindicator, pillager, vex (anything else is a wolf); count 1 to 6, 10 to 180 seconds, size 0.5 to 2. `gear` takes `mainhand`,
+`offhand`, `head`, `chest`, `legs` and `feet`. They go for whatever attacks
 him, whatever he attacks and monsters near him, and follow him around. They never target or hurt a player, a pet, a villager or another
 summon (their arrows included); golems and pets leave them alone, and his own hits and blasts don't hurt them. They don't burn in daylight,
 don't turn into drowned or strays, pick nothing up and drop no loot or xp. At most 12 per player (the oldest goes first) and a 3 s cooldown;

@@ -83,10 +83,7 @@ public class SummonAbility {
 		mob.getAttributeInstance(EntityAttributes.SCALE).setBaseValue(summon.size());
 		// the new size only applies on the mob's first tick; place() must test the grown box
 		mob.calculateDimensions();
-		summon.gear().ifPresent(gear -> {
-			gear.mainhand().ifPresent(item -> mob.equipStack(EquipmentSlot.MAINHAND, new ItemStack(item)));
-			gear.head().ifPresent(item -> mob.equipStack(EquipmentSlot.HEAD, new ItemStack(item)));
-		});
+		summon.gear().ifPresent(gear -> gear.bySlot().forEach((slot, item) -> item.ifPresent(i -> mob.equipStack(slot, new ItemStack(i)))));
 		for (EquipmentSlot slot : EquipmentSlot.values()) {
 			mob.setEquipmentDropChance(slot, 0);
 		}

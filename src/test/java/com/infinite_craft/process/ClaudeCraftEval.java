@@ -374,6 +374,12 @@ public class ClaudeCraftEval {
 		}
 	}
 
+	@Test
+	void evalSkeletonHornWithChestIsClean() throws Exception {
+		String horn = "{id:\"infinite_craft:custom_crafted_item\",count:1i,components:{\"minecraft:item_model\":\"infinite_craft:summon_horn\",\"minecraft:custom_model_data\":{colors:[14737632]},\"minecraft:item_name\":{text:\"Skeleton Army Horn\",color:\"white\"},\"minecraft:max_stack_size\":1,\"minecraft:use_cooldown\":{seconds:5.0f},\"infinite_craft:summon\":{entity:\"minecraft:skeleton\",count:6,seconds:90,name:\"Skeleton Soldier\",gear:{mainhand:\"minecraft:bow\",head:\"minecraft:iron_helmet\",chest:\"minecraft:chainmail_chestplate\"},color:\"#E0E0E0\"}}}";
+		if (!parsesCleanly(horn)) throw new AssertionError("the eval's Skeleton Army Horn isn't clean");
+	}
+
 	// every record Claude writes inside our components: an extra field in any of them makes the craft not clean
 	@Test
 	void unknownFieldAnywhereInOurComponentsIsNotClean() throws Exception {

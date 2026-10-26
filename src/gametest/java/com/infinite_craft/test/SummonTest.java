@@ -6,6 +6,7 @@ import static com.infinite_craft.test.CraftedItemUseTest.use;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.infinite_craft.ability.Abilities;
 import com.infinite_craft.ability.Blast;
@@ -18,6 +19,7 @@ import com.infinite_craft.mixin.MobEntityAccessor;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.ExperienceOrbEntity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
@@ -31,7 +33,9 @@ import net.minecraft.entity.passive.WolfEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.ZombieEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.test.TestContext;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
@@ -181,6 +185,23 @@ public class SummonTest {
 			context.assertTrue(zombie.isRemoved(), Text.literal("a summon left over from before a restart came back"));
 			context.complete();
 		});
+	}
+
+	// the eval's Skeleton Army Horn asked for a chestplate, which was dropped when gear had only mainhand and head
+	@GameTest(maxTicks = 20)
+	public void summonsWearAllTheirGear(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:skeleton\",gear:{mainhand:\"minecraft:bow\","
+			+ "offhand:\"minecraft:shield\",head:\"minecraft:iron_helmet\",chest:\"minecraft:chainmail_chestplate\","
+			+ "legs:\"minecraft:golden_leggings\",feet:\"minecraft:diamond_boots\"}}")));
+		MobEntity skeleton = Summons.of(player).getFirst();
+		Map<EquipmentSlot, Item> expected = Map.of(EquipmentSlot.MAINHAND, Items.BOW, EquipmentSlot.OFFHAND, Items.SHIELD,
+			EquipmentSlot.HEAD, Items.IRON_HELMET, EquipmentSlot.CHEST, Items.CHAINMAIL_CHESTPLATE,
+			EquipmentSlot.LEGS, Items.GOLDEN_LEGGINGS, EquipmentSlot.FEET, Items.DIAMOND_BOOTS);
+		expected.forEach((slot, item) -> context.assertTrue(skeleton.getEquippedStack(slot).isOf(item),
+			Text.literal(slot.getName() + " is " + skeleton.getEquippedStack(slot))));
+		context.complete();
 	}
 
 	@GameTest(maxTicks = 20)
