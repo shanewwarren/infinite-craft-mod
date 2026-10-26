@@ -24,6 +24,7 @@ import net.minecraft.entity.ExperienceOrbEntity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.goal.ActiveTargetGoal;
+import net.minecraft.entity.ai.goal.FleeEntityGoal;
 import net.minecraft.entity.conversion.EntityConversionContext;
 import net.minecraft.entity.mob.HuskEntity;
 import net.minecraft.entity.passive.BeeEntity;
@@ -266,6 +267,23 @@ public class SummonTest {
 			if (hurt(husk)) context.complete();
 		});
 		context.runAtTick(560, () -> context.assertTrue(false, Text.literal("the skeleton never hit the husk")));
+	}
+
+	// vanilla skeletons run from wolves and foxes from wolves and polar bears, ahead of attacking: a summoned skeleton near
+	// his wolf (or his Wolf Whistle pack) kept dropping its draw and never shot
+	@GameTest(maxTicks = 20)
+	public void summonsDontRunFromHisSide(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		for (String mob : List.of("skeleton", "stray", "bogged", "fox")) {
+			summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:" + mob + "\"}")));
+		}
+		for (MobEntity summon : Summons.of(player)) {
+			boolean flees = ((MobEntityAccessor) summon).infiniteCraft$goalSelector().getGoals().stream()
+				.anyMatch(goal -> goal.getGoal() instanceof FleeEntityGoal);
+			context.assertTrue(!flees, Text.literal("a summoned " + summon.getType().getUntranslatedName() + " still runs away"));
+		}
+		context.complete();
 	}
 
 	@GameTest(maxTicks = 300)
