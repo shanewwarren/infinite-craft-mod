@@ -53,15 +53,6 @@ public abstract class ItemStackMixin {
 		return original.call(item, world, user, hand);
 	}
 
-	// after use_cooldown is applied, so a summoner's built-in cooldown isn't cut short by a shorter one
-	@Inject(method = "use", at = @At("RETURN"))
-	private void infiniteCraft$summonCooldown(World world, PlayerEntity user, Hand hand, CallbackInfoReturnable<ActionResult> cir) {
-		ItemStack stack = (ItemStack) (Object) this;
-		if (stack.contains(Abilities.SUMMON) && cir.getReturnValue() instanceof ActionResult.Success) {
-			SummonAbility.afterUse(user, stack);
-		}
-	}
-
 	// vehicle items place their vehicle on the block clicked, like a boat
 	@WrapOperation(method = "useOnBlock", at = @At(value = "INVOKE",
 		target = "Lnet/minecraft/item/Item;useOnBlock(Lnet/minecraft/item/ItemUsageContext;)Lnet/minecraft/util/ActionResult;"))

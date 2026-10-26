@@ -1,12 +1,15 @@
 package com.infinite_craft.ability;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.WeakHashMap;
+
 import org.jetbrains.annotations.Nullable;
 
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.UseCooldownComponent;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.VexEntity;
@@ -27,11 +30,22 @@ import net.minecraft.world.World;
 /** Calls the helpers of items with {@link SummonComponent}, on free ground around the player */
 public class SummonAbility {
 
-	// so a summon horn can't be spammed; a longer minecraft:use_cooldown on the item wins
-	private static final int MIN_COOLDOWN_TICKS = 60;
+	// so a summon horn can't be spammed. Kept here, not in the item cooldowns: those go by item id, and every crafted
+	// item is infinite_craft:custom_crafted_item, so a horn's cooldown would lock his guns too
+	private static final int COOLDOWN_TICKS = 60;
+
+	// when each player last summoned, by world time; one map per side, like ShootAbility's
+	private static final Map<PlayerEntity, Long> clientLastSummon = Collections.synchronizedMap(new WeakHashMap<>());
+	private static final Map<PlayerEntity, Long> serverLastSummon = Collections.synchronizedMap(new WeakHashMap<>());
 
 	public static ActionResult use(World world, PlayerEntity user, Hand hand, ItemStack stack, SummonComponent summon) {
+		Map<PlayerEntity, Long> lastSummon = world.isClient() ? clientLastSummon : serverLastSummon;
+		Long last = lastSummon.get(user);
+		if (last != null && world.getTime() - last >= 0 && world.getTime() - last < COOLDOWN_TICKS) {
+			return ActionResult.FAIL;
+		}
 		if (!(world instanceof ServerWorld serverWorld)) {
+			lastSummon.put(user, world.getTime());
 			return ActionResult.SUCCESS;
 		}
 		int spawned = 0;
@@ -41,17 +55,15 @@ public class SummonAbility {
 		if (spawned == 0) {
 			return ActionResult.FAIL;
 		}
+		lastSummon.put(user, world.getTime());
 		world.playSound(null, user.getX(), user.getY(), user.getZ(), SoundEvents.ENTITY_EVOKER_CAST_SPELL, SoundCategory.PLAYERS, 1.0f, 1.0f);
 		return ActionResult.SUCCESS;
 	}
 
-	/** After a use, whichever cooldown is longer: the built-in one or the item's own (ItemStackMixin) */
-	public static void afterUse(PlayerEntity user, ItemStack stack) {
-		UseCooldownComponent own = stack.get(DataComponentTypes.USE_COOLDOWN);
-		int ownTicks = own == null ? 0 : own.getCooldownTicks();
-		if (ownTicks < MIN_COOLDOWN_TICKS) {
-			user.getItemCooldownManager().set(stack, MIN_COOLDOWN_TICKS);
-		}
+	/** For tests: lets the player summon again straight away */
+	public static void resetCooldown(PlayerEntity player) {
+		clientLastSummon.remove(player);
+		serverLastSummon.remove(player);
 	}
 
 	private static @Nullable MobEntity spawn(ServerWorld world, PlayerEntity owner, SummonComponent summon) {
@@ -69,6 +81,8 @@ public class SummonAbility {
 			vehicle.discard();
 		}
 		mob.getAttributeInstance(EntityAttributes.SCALE).setBaseValue(summon.size());
+		// the new size only applies on the mob's first tick; place() must test the grown box
+		mob.calculateDimensions();
 		summon.gear().ifPresent(gear -> {
 			gear.mainhand().ifPresent(item -> mob.equipStack(EquipmentSlot.MAINHAND, new ItemStack(item)));
 			gear.head().ifPresent(item -> mob.equipStack(EquipmentSlot.HEAD, new ItemStack(item)));
@@ -82,7 +96,15 @@ public class SummonAbility {
 		});
 		mob.setPersistent();
 		mob.setCanPickUpLoot(false);
-		if (mob instanceof ZombieEntity zombie) zombie.setCanBreakDoors(false);
+		if (mob instanceof ZombieEntity zombie) {
+			zombie.setCanBreakDoors(false);
+			// on hard, a hurt zombie calls wild zombies, which would stay and hunt him
+			EntityAttributeInstance reinforcements = zombie.getAttributeInstance(EntityAttributes.SPAWN_REINFORCEMENTS);
+			if (reinforcements != null) {
+				reinforcements.clearModifiers();
+				reinforcements.setBaseValue(0);
+			}
+		}
 		if (mob instanceof VexEntity vex) vex.setLifeTicks(summon.seconds() * 20);
 
 		if (!place(world, owner, mob)) {

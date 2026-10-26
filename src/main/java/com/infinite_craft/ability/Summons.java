@@ -18,6 +18,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.Tameable;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.Angerable;
+import net.minecraft.entity.mob.CreeperEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.Monster;
 import net.minecraft.entity.passive.BeeEntity;
@@ -25,6 +26,7 @@ import net.minecraft.entity.passive.IronGolemEntity;
 import net.minecraft.entity.passive.MerchantEntity;
 import net.minecraft.entity.passive.SnowGolemEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.particle.DustParticleEffect;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
@@ -45,6 +47,9 @@ public class Summons {
 
 	public static final int MAX_PER_PLAYER = 12;
 
+	/** Marks a summon's arrow, trident or spit: once the summon is gone, the projectile is its own attacker */
+	public static final String SHOT_TAG = "infinite_craft.summon_shot";
+
 	/** Each summon's owner and time left; MobEntityMixin adds it to every mob */
 	public interface Holder {
 		State infiniteCraft$summon();
@@ -62,6 +67,9 @@ public class Summons {
 
 	public static void initialize() {
 		ServerEntityEvents.ENTITY_UNLOAD.register((entity, world) -> forget(entity));
+		ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
+			if (entity instanceof ProjectileEntity shot && shot.getOwner() != null && isSummon(shot.getOwner())) shot.addCommandTag(SHOT_TAG);
+		});
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> removeAll(handler.player));
 		ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register((player, origin, destination) -> removeAll(player));
 		ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> removeAll(oldPlayer));
@@ -72,6 +80,8 @@ public class Summons {
 	public static boolean mayTarget(MobEntity attacker, LivingEntity target) {
 		if (isSummon(attacker)) {
 			if (target instanceof PlayerEntity || isPet(target) || target instanceof MerchantEntity || isSummon(target)) return false;
+			// a hit creeper blows up beside him, so like vanilla wolves and golems, leave them be
+			if (target instanceof CreeperEntity) return false;
 			// an animal only when it started it
 			if (!(target instanceof Monster)) {
 				PlayerEntity owner = ownerOf(attacker);
@@ -89,12 +99,13 @@ public class Summons {
 	 */
 	public static boolean mayDamage(LivingEntity victim, DamageSource source) {
 		Entity attacker = source.getAttacker();
-		if (attacker == null) return true;
-		if (isSummon(attacker) && (victim instanceof PlayerEntity || isPet(victim) || victim instanceof MerchantEntity || isSummon(victim))) {
+		boolean bySummon = attacker != null && isSummon(attacker)
+			|| source.getSource() != null && source.getSource().getCommandTags().contains(SHOT_TAG);
+		if (bySummon && (victim instanceof PlayerEntity || isPet(victim) || victim instanceof MerchantEntity || isSummon(victim))) {
 			return false;
 		}
 		PlayerEntity owner = ownerOf(victim);
-		if (owner != null && (attacker == owner || attacker instanceof Tameable pet && pet.getOwnerReference() != null
+		if (attacker != null && owner != null && (attacker == owner || attacker instanceof Tameable pet && pet.getOwnerReference() != null
 				&& pet.getOwnerReference().getUuid().equals(owner.getUuid()))) {
 			return false;
 		}

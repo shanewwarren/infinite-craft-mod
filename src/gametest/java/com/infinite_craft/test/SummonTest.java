@@ -10,6 +10,7 @@ import java.util.List;
 import com.infinite_craft.ability.Abilities;
 import com.infinite_craft.ability.Blast;
 import com.infinite_craft.ability.ShootComponent;
+import com.infinite_craft.ability.SummonAbility;
 import com.infinite_craft.ability.SummonComponent;
 import com.infinite_craft.ability.Summons;
 import com.infinite_craft.mixin.MobEntityAccessor;
@@ -71,7 +72,7 @@ public class SummonTest {
 	/** Gives the player the summoner in hand and right-clicks it once, the cooldown cleared first */
 	static ActionResult summonOnce(PlayerEntity player, ItemStack summoner) {
 		player.setStackInHand(Hand.MAIN_HAND, summoner);
-		player.getItemCooldownManager().remove(player.getItemCooldownManager().getGroup(summoner));
+		SummonAbility.resetCooldown(player);
 		return use(player, Hand.MAIN_HAND);
 	}
 
@@ -126,9 +127,7 @@ public class SummonTest {
 		ItemStack summoner = ThrustTest.parse(context, summoner("{entity:\"minecraft:husk\",count:6}"));
 		player.setStackInHand(Hand.MAIN_HAND, summoner);
 		for (int i = 0; i < 10; i++) use(player, Hand.MAIN_HAND);
-		context.assertTrue(Summons.of(player).size() == 6 && player.getItemCooldownManager().isCoolingDown(player.getMainHandStack()),
-			Text.literal("%d summons after 10 clicks, cooling down %s".formatted(Summons.of(player).size(),
-				player.getItemCooldownManager().isCoolingDown(player.getMainHandStack()))));
+		context.assertTrue(Summons.of(player).size() == 6, Text.literal("%d summons after 10 clicks".formatted(Summons.of(player).size())));
 		context.complete();
 	}
 
@@ -227,7 +226,7 @@ public class SummonTest {
 		context.runAtTick(250, () -> context.assertTrue(false, Text.literal("the summoned zombie never hurt the husk")));
 	}
 
-	@GameTest(maxTicks = 400)
+	@GameTest(maxTicks = 600)
 	public void skeletonShotsNeverHurtOwnerOrPet(TestContext context) {
 		floor(context);
 		PlayerEntity player = player(context);
@@ -239,12 +238,13 @@ public class SummonTest {
 		MobEntity skeleton = Summons.of(player).getFirst();
 		// close behind him, so its arrows pass through where he stands
 		skeleton.refreshPositionAndAngles(context.getAbsolute(new Vec3d(2.5, 1, 4.5)), 0, 0);
-		context.runAtTick(300, () -> {
+		// shots past him every tick until one lands on the husk; a skeleton may take a while to line up
+		context.runAtEveryTick(() -> {
 			context.assertTrue(!hurt(player) && !hurt(wolf),
 				Text.literal("player health %s, wolf health %s".formatted(player.getHealth(), wolf.getHealth())));
-			context.assertTrue(hurt(husk), Text.literal("the skeleton never hit the husk"));
-			context.complete();
+			if (hurt(husk)) context.complete();
 		});
+		context.runAtTick(560, () -> context.assertTrue(false, Text.literal("the skeleton never hit the husk")));
 	}
 
 	@GameTest(maxTicks = 300)
@@ -257,6 +257,8 @@ public class SummonTest {
 		MobEntity zombie = Summons.of(player).getFirst();
 		// he swings at his own summon by accident: his wolf joins in on what he attacks
 		player.attack(zombie);
+		// his wolf joining in (AttackWithOwnerGoal) ends in setTarget; the mock player isn't in the world, so ask it directly
+		wolf.setTarget(zombie);
 		context.runAtEveryTick(() -> context.assertTrue(golem.getTarget() != zombie && wolf.getTarget() != zombie,
 			Text.literal("golem target %s, wolf target %s".formatted(golem.getTarget(), wolf.getTarget()))));
 		context.runAtTick(200, () -> {
@@ -362,5 +364,116 @@ public class SummonTest {
 			context.assertTrue(fought >= 8, Text.literal("only " + fought + " of " + husks.size() + " husks were fought"));
 			context.complete();
 		});
+	}
+
+	// --- from the branch review
+
+	@GameTest(maxTicks = 20)
+	public void cooldownDoesNotLockOtherCraftedItems(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:wolf\"}")));
+		ItemStack gun = ThrustTest.parse(context,
+			"{id:\"infinite_craft:custom_crafted_item\",count:1i,components:{\"infinite_craft:shoot\":{kind:\"beam\"}}}");
+		context.assertTrue(!player.getItemCooldownManager().isCoolingDown(gun), Text.literal("summoning put his gun on cooldown too"));
+		player.setStackInHand(Hand.MAIN_HAND, ThrustTest.parse(context, summoner("{entity:\"minecraft:wolf\"}")));
+		use(player, Hand.MAIN_HAND);
+		context.assertTrue(Summons.of(player).size() == 1, Text.literal("the summon cooldown didn't hold: " + Summons.of(player).size()));
+		context.complete();
+	}
+
+	// a 3-high room: a normal golem (2.7) fits, a size-2 one (5.4) doesn't
+	@GameTest(maxTicks = 40)
+	public void bigSummonNeverGrowsIntoTheCeiling(TestContext context) {
+		floor(context);
+		for (int x = 0; x < 8; x++) {
+			for (int z = 0; z < 8; z++) {
+				context.setBlockState(new BlockPos(x, 4, z), Blocks.STONE);
+			}
+		}
+		PlayerEntity player = player(context);
+		summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:iron_golem\",size:2.0f}")));
+		List<MobEntity> golems = Summons.of(player);
+		context.runAtTick(5, () -> {
+			for (MobEntity golem : golems) {
+				context.assertTrue(context.getWorld().isSpaceEmpty(golem),
+					Text.literal("a %.1f-tall golem is stuck in the ceiling".formatted(golem.getHeight())));
+			}
+			context.complete();
+		});
+	}
+
+	@GameTest(maxTicks = 20)
+	public void summonedZombiesCallNoReinforcements(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:zombie\",count:6}")));
+		for (MobEntity zombie : Summons.of(player)) {
+			double chance = zombie.getAttributeValue(net.minecraft.entity.attribute.EntityAttributes.SPAWN_REINFORCEMENTS);
+			context.assertTrue(chance == 0, Text.literal("a summoned zombie calls wild reinforcements with chance " + chance));
+		}
+		context.complete();
+	}
+
+	@GameTest(maxTicks = 20)
+	public void summonsCantBeTamedOrBred(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:wolf\"}")));
+		WolfEntity wolf = (WolfEntity) Summons.of(player).getFirst();
+		for (int i = 0; i < 20; i++) {
+			player.setStackInHand(Hand.MAIN_HAND, new ItemStack(net.minecraft.item.Items.BONE, 64));
+			wolf.interact(player, Hand.MAIN_HAND);
+		}
+		context.assertTrue(!wolf.isTamed() && player.getMainHandStack().getCount() == 64,
+			Text.literal("tamed %s, bones left %d".formatted(wolf.isTamed(), player.getMainHandStack().getCount())));
+		context.complete();
+	}
+
+	// the skeleton's time runs out while its arrow flies: the arrow is its own attacker then
+	@GameTest(maxTicks = 20)
+	public void arrowFromAGoneSummonHurtsNoOne(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		WolfEntity wolf = pet(context, player, 5.5, 5.5);
+		summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:skeleton\"}")));
+		MobEntity skeleton = Summons.of(player).getFirst();
+		net.minecraft.entity.projectile.ArrowEntity arrow = new net.minecraft.entity.projectile.ArrowEntity(context.getWorld(), skeleton,
+			new ItemStack(net.minecraft.item.Items.ARROW), null);
+		context.getWorld().spawnEntity(arrow);
+		Summons.removeAll(player);
+		net.minecraft.entity.damage.DamageSource source = context.getWorld().getDamageSources().arrow(arrow,
+			arrow.getOwner() == null ? arrow : arrow.getOwner());
+		player.damage(context.getWorld(), source, 4);
+		wolf.damage(context.getWorld(), source, 4);
+		context.assertTrue(!hurt(player) && !hurt(wolf), Text.literal("player %s, wolf %s".formatted(player.getHealth(), wolf.getHealth())));
+		context.complete();
+	}
+
+	// the pet branch of the damage guard: a summon's arrow at his wolf
+	@GameTest(maxTicks = 20)
+	public void summonArrowSparesHisPet(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		WolfEntity wolf = pet(context, player, 5.5, 5.5);
+		summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:skeleton\"}")));
+		MobEntity skeleton = Summons.of(player).getFirst();
+		net.minecraft.entity.projectile.ArrowEntity arrow = new net.minecraft.entity.projectile.ArrowEntity(context.getWorld(), skeleton,
+			new ItemStack(net.minecraft.item.Items.ARROW), null);
+		wolf.damage(context.getWorld(), context.getWorld().getDamageSources().arrow(arrow, skeleton), 4);
+		context.assertTrue(!hurt(wolf), Text.literal("his summon's arrow hurt his wolf: " + wolf.getHealth()));
+		context.complete();
+	}
+
+	@GameTest(maxTicks = 20)
+	public void summonsLeaveCreepersAlone(TestContext context) {
+		floor(context);
+		PlayerEntity player = player(context);
+		net.minecraft.entity.mob.CreeperEntity creeper = context.spawnEntity(EntityType.CREEPER, new Vec3d(1.5, 1, 1.5));
+		summonOnce(player, ThrustTest.parse(context, summoner("{entity:\"minecraft:zombie\"}")));
+		MobEntity zombie = Summons.of(player).getFirst();
+		zombie.setTarget(creeper);
+		context.assertTrue(zombie.getTarget() != creeper, Text.literal("a summon went for a creeper beside him"));
+		context.complete();
 	}
 }

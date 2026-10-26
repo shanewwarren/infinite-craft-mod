@@ -14,6 +14,9 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.conversion.EntityConversionContext;
 import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.util.ActionResult;
+import net.minecraft.util.Hand;
 
 /**
  * Gives every mob a place to keep whether it's a summon, and the rules that keep summons on the player's side: no
@@ -35,6 +38,14 @@ public abstract class MobEntityMixin implements Summons.Holder {
 	private void infiniteCraft$summonsStay(CallbackInfo ci) {
 		if (Summons.isSummon((MobEntity) (Object) this)) {
 			ci.cancel();
+		}
+	}
+
+	// no taming, breeding, name tags, leads, saddles or chests: whatever he gives a summon would vanish with it
+	@Inject(method = "interact", at = @At("HEAD"), cancellable = true)
+	private void infiniteCraft$summonsTakeNothing(PlayerEntity player, Hand hand, CallbackInfoReturnable<ActionResult> cir) {
+		if (Summons.isSummon((MobEntity) (Object) this)) {
+			cir.setReturnValue(ActionResult.PASS);
 		}
 	}
 
