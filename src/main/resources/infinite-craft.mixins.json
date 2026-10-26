@@ -11,7 +11,10 @@
 		"FireworkRocketEntityMixin",
 		"ServerPlayNetworkHandlerMixin",
 		"ServerPlayerEntityMixin",
-		"LivingEntityMixin"
+		"LivingEntityMixin",
+		"MobEntityMixin",
+		"MobEntityAccessor",
+		"BeeEntityAccessor"
 	],
 	"injectors": {
 		"defaultRequire": 1

@@ -234,6 +234,11 @@ public class AiPrompt {
 		// armor with bonuses (modifiers replace the base item's own armor, so include armor)
 		"""
 		{id:"minecraft:golden_chestplate",count:1i,components:{"minecraft:item_name":{text:"Holy Chestplate",color:"gold"},"minecraft:unbreakable":{},"minecraft:enchantments":{"minecraft:protection":4},"infinite_craft:aura":{effects:[{id:"minecraft:regeneration"},{id:"minecraft:fire_resistance"}],particle:"minecraft:end_rod",damage:2.0f,radius:4.0f},"minecraft:attribute_modifiers":[{type:"minecraft:armor",id:"infinite_craft:holy_armor",amount:10.0d,operation:"add_value",slot:"chest"},{type:"minecraft:max_health",id:"infinite_craft:holy_health",amount:10.0d,operation:"add_value",slot:"chest"}]}}""",
+		// helpers that fight for the player: infinite_craft:summon
+		"""
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:summon_horn","minecraft:custom_model_data":{colors:[8421504]},"minecraft:item_name":{text:"Wolf Whistle",color:"gray"},"minecraft:max_stack_size":1,"infinite_craft:summon":{entity:"minecraft:wolf",count:3,seconds:90,color:"gray"}}}""",
+		"""
+		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"infinite_craft:summon_horn","minecraft:item_name":{text:"Skeleton Army Horn",color:"white"},"minecraft:max_stack_size":1,"infinite_craft:summon":{entity:"minecraft:skeleton",count:5,seconds:60,gear:{mainhand:"minecraft:bow",head:"minecraft:iron_helmet"},color:"#E0E0E0"}}}""",
 		// tool
 		"""
 		{id:"infinite_craft:custom_crafted_item",count:1i,components:{"minecraft:item_model":"minecraft:stonecutter","minecraft:item_name":{text:"Disc Saw",color:"gray"},"minecraft:max_stack_size":1,"minecraft:tool":{rules:[{blocks:"#minecraft:mineable/axe",speed:20.0f,correct_for_drops:true}],default_mining_speed:1.0f,damage_per_block:0}}}""",
@@ -299,6 +304,13 @@ public class AiPrompt {
 			\t\t\tFields: effects (status effects kept on while worn, [{id:"minecraft:regeneration",amplifier:0}]; amplifier 0 is level I, up to 3), particle (a simple particle drawn around
 			\t\t\tthe wearer: "minecraft:end_rod" holy sparkle, "minecraft:flame", "minecraft:soul_fire_flame", "minecraft:heart", "minecraft:enchant", "minecraft:electric_spark"...; or leave it out and set color for glowing dust),
 			\t\t\tdamage (per second to monsters within radius blocks, never animals, pets or players; 1 to 4) and radius (1 to 8). Armor that should feel powerful, holy or magic gets an aura.
+			\t\tHelpers that fight for the player (wolf whistles, skeleton army horns, bee jars, golem bells, zombie bodyguards): "infinite_craft:summon", this mod's component.
+			\t\t\tRight-click calls mobs that fight monsters for the player and never hurt him, his pets, villagers or each other; they go after seconds. At most 12 at once.
+			\t\t\tFields: entity (one of minecraft:wolf, iron_golem, snow_golem, bee, fox, polar_bear, llama, zombie, husk, drowned, skeleton, stray, bogged, vindicator, pillager, vex; anything else is a wolf),
+			\t\t\tcount (how many each use, 1 to 6), seconds (how long they stay, 10 to 180), name (shown above each one), size (0.5 half size to 2 giant),
+			\t\t\tgear (what they hold and wear: {mainhand:"minecraft:crossbow",head:"minecraft:golden_helmet"}, item ids only), color (the puff they arrive and leave in).
+			\t\t\tMake different helpers different: pick the mob that fits the name, give an army several, a bodyguard one big one, a bee jar a swarm of bees.
+			\t\t\tUse "minecraft:item_model":"infinite_craft:summon_horn" for horns, bells and whistles, or a fitting vanilla model (a honey bottle for a bee jar, a bone for a dog whistle).
 			\t\tFun without fighting (shrink rings, giant crowns, moon boots, spider gloves, long arms, fish gills): not every item is a weapon.
 			\t\t\tAttribute modifiers on a worn or held item change the player's body and the rules of the world; use the slot it's worn or held in:
 			\t\t\t"minecraft:scale" (size: amount -0.75 with operation add_multiplied_total is a quarter size, 2.0 is three times as big; Shrink Ring, Giant Crown),

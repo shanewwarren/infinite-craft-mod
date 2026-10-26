@@ -97,7 +97,12 @@ public class ClaudeCraftEval {
 			new Recipe("wish: Fish Gills", List.of(named(Items.LEATHER_HELMET, "Fish Gills"), new ItemStack(Items.PUFFERFISH))),
 			new Recipe("wish: Long Arms", List.of(named(Items.STICK, "Long Arms"), new ItemStack(Items.PISTON))),
 			new Recipe("wish: Shrink Potion", List.of(named(Items.GLASS_BOTTLE, "Shrink Potion"), new ItemStack(Items.RED_MUSHROOM))),
-			new Recipe("wish: Giant Potion", List.of(named(Items.GLASS_BOTTLE, "Giant Potion"), new ItemStack(Items.GOLDEN_APPLE)))
+			new Recipe("wish: Giant Potion", List.of(named(Items.GLASS_BOTTLE, "Giant Potion"), new ItemStack(Items.GOLDEN_APPLE))),
+			// Part C: helpers
+			new Recipe("wish: Wolf Whistle", List.of(named(Items.BONE, "Wolf Whistle"), new ItemStack(Items.STICK))),
+			new Recipe("wish: Skeleton Army Horn", List.of(named(Items.GOAT_HORN, "Skeleton Army Horn"), new ItemStack(Items.BONE))),
+			new Recipe("wish: Bee Swarm Jar", List.of(named(Items.GLASS_BOTTLE, "Bee Swarm Jar"), new ItemStack(Items.HONEYCOMB))),
+			new Recipe("wish: Golem Bell", List.of(named(Items.BELL, "Golem Bell"), new ItemStack(Items.IRON_BLOCK)))
 		);
 	}
 
@@ -113,7 +118,7 @@ public class ClaudeCraftEval {
 		"minecraft:glider", "minecraft:tool", "minecraft:weapon", "minecraft:enchantments", "minecraft:death_protection",
 		"minecraft:blocks_attacks", "minecraft:damage_resistant", "minecraft:charged_projectiles",
 		"infinite_craft:shoot", "infinite_craft:thrust", "infinite_craft:launch", "infinite_craft:dash", "infinite_craft:aura",
-		"infinite_craft:vehicle"
+		"infinite_craft:vehicle", "infinite_craft:summon"
 	);
 
 	// The video's guns: each should shoot with no ammo, and feel different from the others; the last two should blast
@@ -148,9 +153,9 @@ public class ClaudeCraftEval {
 			s.getBoolean("lightning").orElse(false) ? " lightning" : "");
 	}
 
-	/** The wishes added for Part B, listed with their signatures so it's easy to see each used the field it's about */
-	private static final List<String> NEW_WISHES = List.of("wish: Freeze Ray", "wish: Poison Dart Gun", "wish: Moon Boots",
-		"wish: Spider Gloves", "wish: Fish Gills", "wish: Long Arms", "wish: Shrink Potion", "wish: Giant Potion");
+	/** The wishes added for the part being built, listed with their signatures so it's easy to see each used the field it's about */
+	private static final List<String> NEW_WISHES = List.of("wish: Wolf Whistle", "wish: Skeleton Army Horn", "wish: Bee Swarm Jar",
+		"wish: Golem Bell");
 
 	/** Wishes a kid would expect to play differently from each other; two in one category with one signature is sameness */
 	static final Map<String, List<String>> CATEGORIES = Map.of(
@@ -158,7 +163,8 @@ public class ClaudeCraftEval {
 			"wish: Freeze Ray", "wish: Poison Dart Gun"),
 		"wearables", List.of("wish: Jetpack", "wish: Dash Boots", "wish: Steam Armor", "wish: God Armor", "wish: Moon Boots",
 			"wish: Spider Gloves", "wish: Fish Gills", "wish: Long Arms"),
-		"drinks", List.of("wish: Prime Energy Drink", "wish: Shrink Potion", "wish: Giant Potion"));
+		"drinks", List.of("wish: Prime Energy Drink", "wish: Shrink Potion", "wish: Giant Potion"),
+		"helpers", List.of("wish: Wolf Whistle", "wish: Skeleton Army Horn", "wish: Bee Swarm Jar", "wish: Golem Bell"));
 
 	/** Per category, each signature that two or more of its results share, with their names */
 	static Map<String, Map<String, List<String>>> sameWithinCategory(List<Map.Entry<String, String>> labeledNbts) throws Exception {
@@ -260,7 +266,7 @@ public class ClaudeCraftEval {
 
 	@Test
 	void newExamplesArePresent() {
-		for (String name : List.of("Shrink Potion", "Moon Boots", "Freeze Ray")) {
+		for (String name : List.of("Shrink Potion", "Moon Boots", "Freeze Ray", "Wolf Whistle", "Skeleton Army Horn")) {
 			if (AiPrompt.POWER_EXAMPLES.stream().noneMatch(e -> e.contains("\"" + name + "\""))) {
 				throw new AssertionError("no prompt example named " + name);
 			}

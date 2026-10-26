@@ -10,6 +10,8 @@ import com.infinite_craft.ability.LaunchAbility;
 import com.infinite_craft.ability.LaunchComponent;
 import com.infinite_craft.ability.ShootAbility;
 import com.infinite_craft.ability.ShootComponent;
+import com.infinite_craft.ability.SummonAbility;
+import com.infinite_craft.ability.SummonComponent;
 import com.infinite_craft.vehicle.VehicleEntity;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
@@ -43,6 +45,10 @@ public abstract class ItemStackMixin {
 		ShootComponent shoot = stack.get(Abilities.SHOOT);
 		if (shoot != null) {
 			return ShootAbility.use(world, user, hand, stack, shoot);
+		}
+		SummonComponent summon = stack.get(Abilities.SUMMON);
+		if (summon != null) {
+			return SummonAbility.use(world, user, hand, stack, summon);
 		}
 		return original.call(item, world, user, hand);
 	}

@@ -113,6 +113,15 @@ a car steers while moving. The item's `infinite_craft:shoot` is its gun: right c
 It never hurts its rider (its own shells, rams, falls). Ramming hurts mobs, never players, pets or armor stands. Anyone can drive or pack up
 any vehicle; sneak-hitting it gives the item back repaired, and a destroyed vehicle drops its item too. Ground vehicles only, for now.
 
+`infinite_craft:summon` calls helpers that fight for the player: right-click and they appear on free ground around him.
+`{entity:"minecraft:skeleton", count:5, seconds:60, gear:{mainhand:"minecraft:bow", head:"minecraft:iron_helmet"}, name:"Bones",
+size:1.0f, color:"#E0E0E0"}`. Mobs: wolf, iron golem, snow golem, bee, fox, polar bear, llama, zombie, husk, drowned, skeleton, stray,
+bogged, vindicator, pillager, vex (anything else is a wolf); count 1 to 6, 10 to 180 seconds, size 0.5 to 2. They go for whatever attacks
+him, whatever he attacks and monsters near him, and follow him around. They never target or hurt a player, a pet, a villager or another
+summon (their arrows included); golems and pets leave them alone, and his own hits and blasts don't hurt them. They don't burn in daylight,
+don't turn into drowned or strays, pick nothing up and drop no loot or xp. At most 12 per player (the oldest goes first) and a 3 s cooldown;
+they vanish after their time, or when he leaves, dies or changes dimension.
+
 `infinite_craft:attributes` is a consume effect for `minecraft:consumable`'s `on_consume_effects`: attribute modifiers for a while, which
 vanilla potions can't do. A Shrink Potion: `{type:"infinite_craft:attributes", seconds:30.0f, modifiers:[{type:"minecraft:scale",
 id:"infinite_craft:shrink", amount:-0.75d, operation:"add_multiplied_total"}]}` (the `attribute_modifiers` format without a slot;

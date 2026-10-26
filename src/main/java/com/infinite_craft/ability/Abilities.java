@@ -53,6 +53,12 @@ public class Abilities {
 		ComponentType.<VehicleComponent>builder().codec(VehicleComponent.CODEC).build()
 	);
 
+	public static final ComponentType<SummonComponent> SUMMON = Registry.register(
+		Registries.DATA_COMPONENT_TYPE,
+		Identifier.of(InfiniteCraft.MOD_ID, "summon"),
+		ComponentType.<SummonComponent>builder().codec(SummonComponent.CODEC).build()
+	);
+
 	public static void initialize() {
 		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, SHOOT);
 		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, THRUST);
@@ -60,11 +66,13 @@ public class Abilities {
 		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, DASH);
 		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, AURA);
 		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, VEHICLE);
+		ComponentTooltipAppenderRegistry.addBefore(DataComponentTypes.ATTRIBUTE_MODIFIERS, SUMMON);
 		// hidden: shows no tooltip
 		CraftId.initialize();
 		LaunchAbility.initialize();
 		Blast.initialize();
 		TimedAttributes.initialize();
+		Summons.initialize();
 		Vehicles.initialize();
 	}
 }

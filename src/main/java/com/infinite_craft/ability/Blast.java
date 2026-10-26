@@ -88,7 +88,7 @@ public class Blast {
 		}
 	}
 
-	/** Mobs a blast may hurt: not the shooter, not their pets, and not armor stands, which break into an item */
+	/** Mobs a blast may hurt: not the shooter, not their pets or summons, and not armor stands, which break into an item */
 	public static boolean isFairGame(Entity entity, @Nullable Entity shooter) {
 		if (!(entity instanceof LivingEntity) || entity instanceof ArmorStandEntity || entity.isSpectator()) {
 			return false;
@@ -98,6 +98,9 @@ public class Blast {
 				return false;
 			}
 			if (entity instanceof Tameable pet && pet.getOwnerReference() != null && pet.getOwnerReference().getUuid().equals(shooter.getUuid())) {
+				return false;
+			}
+			if (Summons.ownerOf(entity) == shooter) {
 				return false;
 			}
 		}

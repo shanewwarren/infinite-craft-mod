@@ -59,6 +59,8 @@ public class BehaviorSignature {
 			tokens.add(token.append(")").toString());
 		});
 		components.getCompound("infinite_craft:vehicle").ifPresent(vehicle -> tokens.add("vehicle(" + vehicle.getString("body").orElse("tank") + ")"));
+		// Part C: helpers by what they are, e.g. summon(skeleton); the raw id, so a wish for a dragon reads as what Claude wrote
+		components.getCompound("infinite_craft:summon").ifPresent(summon -> tokens.add("summon(" + shortId(summon.getString("entity").orElse("wolf")) + ")"));
 		for (String plain : List.of("launch", "dash", "thrust")) {
 			if (components.contains("infinite_craft:" + plain)) tokens.add(plain);
 		}
