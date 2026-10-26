@@ -141,4 +141,20 @@ public class BehaviorSignatureTest {
 		assertEquals("shoot(bullet,fire,hit_poison,hit_slowness)", of("""
 			{id:"infinite_craft:custom_crafted_item",count:1i,components:{"infinite_craft:shoot":{kind:"bullet",fire:1b,effects:[{id:"minecraft:slowness"},{id:"minecraft:poison"}]}}}"""));
 	}
+
+	private static String summoner(String summon) {
+		return "{id:\"infinite_craft:custom_crafted_item\",count:1i,components:{\"infinite_craft:summon\":" + summon + "}}";
+	}
+
+	@Test
+	void summonIsByMobType() {
+		assertEquals("summon(wolf)", of(summoner("{entity:\"minecraft:wolf\",count:3}")));
+		assertEquals(of(summoner("{entity:\"minecraft:wolf\",count:3}")), of(summoner("{entity:\"minecraft:wolf\",count:1,seconds:120}")));
+		assertEquals("summon(skeleton)", of(summoner("{entity:\"minecraft:skeleton\"}")));
+	}
+
+	@Test
+	void summonDefaultsToWolf() {
+		assertEquals("summon(wolf)", of(summoner("{}")));
+	}
 }

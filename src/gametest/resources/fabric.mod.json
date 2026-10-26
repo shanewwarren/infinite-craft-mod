@@ -16,7 +16,8 @@
 			"com.infinite_craft.test.VehicleTest",
 			"com.infinite_craft.test.CraftHandoffTest",
 			"com.infinite_craft.test.CraftResultsTest",
-			"com.infinite_craft.test.TimedAttributesTest"
+			"com.infinite_craft.test.TimedAttributesTest",
+			"com.infinite_craft.test.SummonTest"
 		],
 		"fabric-client-gametest": [
 			"com.infinite_craft.test.ShootClientGameTest",
