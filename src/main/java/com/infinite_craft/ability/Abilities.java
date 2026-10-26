@@ -72,6 +72,7 @@ public class Abilities {
 		LaunchAbility.initialize();
 		Blast.initialize();
 		TimedAttributes.initialize();
+		Summons.initialize();
 		Vehicles.initialize();
 	}
 }

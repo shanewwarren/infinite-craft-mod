@@ -10,6 +10,8 @@ import com.infinite_craft.ability.LaunchAbility;
 import com.infinite_craft.ability.LaunchComponent;
 import com.infinite_craft.ability.ShootAbility;
 import com.infinite_craft.ability.ShootComponent;
+import com.infinite_craft.ability.SummonAbility;
+import com.infinite_craft.ability.SummonComponent;
 import com.infinite_craft.vehicle.VehicleEntity;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
@@ -44,7 +46,20 @@ public abstract class ItemStackMixin {
 		if (shoot != null) {
 			return ShootAbility.use(world, user, hand, stack, shoot);
 		}
+		SummonComponent summon = stack.get(Abilities.SUMMON);
+		if (summon != null) {
+			return SummonAbility.use(world, user, hand, stack, summon);
+		}
 		return original.call(item, world, user, hand);
+	}
+
+	// after use_cooldown is applied, so a summoner's built-in cooldown isn't cut short by a shorter one
+	@Inject(method = "use", at = @At("RETURN"))
+	private void infiniteCraft$summonCooldown(World world, PlayerEntity user, Hand hand, CallbackInfoReturnable<ActionResult> cir) {
+		ItemStack stack = (ItemStack) (Object) this;
+		if (stack.contains(Abilities.SUMMON) && cir.getReturnValue() instanceof ActionResult.Success) {
+			SummonAbility.afterUse(user, stack);
+		}
 	}
 
 	// vehicle items place their vehicle on the block clicked, like a boat
