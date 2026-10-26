@@ -16,6 +16,7 @@ import com.infinite_craft.InfiniteItem;
 import com.infinite_craft.ability.Abilities;
 import com.infinite_craft.ability.AuraComponent;
 import com.infinite_craft.ability.ShootComponent;
+import com.infinite_craft.ability.Summons;
 import com.infinite_craft.ability.TimedAttributesConsumeEffect;
 import com.infinite_craft.ai.AiPrompt;
 import com.infinite_craft.process.InfiniteCraftProcess;
@@ -40,6 +41,7 @@ import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.mob.HuskEntity;
 import net.minecraft.entity.passive.PigEntity;
+import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.item.BowItem;
@@ -91,6 +93,12 @@ public class CraftedItemUseTest {
 	@GameTest(maxTicks = 20)
 	public void timedAttributePotionDoesSomething(TestContext context) {
 		useAll(context, List.of(new Fixture("shrink potion", TimedAttributesTest.SHRINK_POTION.strip())), "TimedAttributesTest", "timed-attributes.md");
+	}
+
+	// a summoner counts as working when helpers appear
+	@GameTest(maxTicks = 20)
+	public void summonerDoesSomething(TestContext context) {
+		useAll(context, List.of(new Fixture("summoner", SummonTest.summoner("{entity:\"minecraft:wolf\",count:2}"))), "SummonTest", "summoners.md");
 	}
 
 	// the eval's Long Arms: reach while held, which no worn-armor check sees
@@ -173,6 +181,7 @@ public class CraftedItemUseTest {
 			checks.add(mine(context, stack, tool));
 		}
 		if (stack.contains(DataComponentTypes.DEATH_PROTECTION)) checks.add(saveFromDeath(context, stack));
+		if (stack.contains(Abilities.SUMMON)) checks.add(summon(context, stack));
 		return checks;
 	}
 
@@ -277,6 +286,19 @@ public class CraftedItemUseTest {
 		dummy.getAttributeInstance(EntityAttributes.MAX_HEALTH).setBaseValue(1000);
 		dummy.setHealth(1000);
 		return dummy;
+	}
+
+	// --- summoners: helpers appear
+
+	private static Check summon(TestContext context, ItemStack stack) {
+		PlayerEntity player = player(context);
+		player.setStackInHand(Hand.MAIN_HAND, stack.copy());
+		use(player, Hand.MAIN_HAND);
+		List<MobEntity> summons = Summons.of(player);
+		String detail = summons.isEmpty() ? "nothing appeared"
+			: "%d %s".formatted(summons.size(), summons.getFirst().getType().getName().getString());
+		Summons.removeAll(player);
+		return new Check("summon", !summons.isEmpty(), detail);
 	}
 
 	// --- wearables: equipping changes the wearer's attributes

@@ -36,6 +36,10 @@
     "description": "orange chainsaw"
   },
   {
+    "model": "infinite_craft:summon_horn",
+    "description": "curved summoning horn with glowing bands, for horns, bells and whistles that call helpers"
+  },
+  {
     "model": "infinite_craft:magic_wand",
     "description": "magic wand with a glowing star"
   },
